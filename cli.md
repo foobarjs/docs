@@ -109,28 +109,63 @@ foobar generate middleware LogRequests
 Database management:
 
 ```bash
-foobar db migrate   # Sync schema with models
-foobar db seed      # Run seeders
-foobar db reset     # Drop and recreate all tables
-foobar db fresh     # Reset and seed
+# File-based migration workflow.
+foobar db make                            # auto-diff from model changes
+foobar db make --diff --name add_stock    # auto-diff with a specific name
+foobar db make --name backfill_countries  # blank migration for data changes
+foobar db migrate                         # apply pending migrations
+foobar db rollback                        # roll back the last batch
+foobar db rollback --step 3               # roll back the last 3 batches
+foobar db status                          # list migrations and whether they've run
 
-# Inspect indexes
-foobar db indexes                    # List declared vs. actual indexes
-foobar db indexes --missing          # Only show missing; exit 1 if any (CI)
-foobar db indexes --extra            # Only show indexes present but not declared
-foobar db indexes --json             # Machine-readable output
+# Dev-only shortcut.
+foobar db sync                            # apply model diff directly (dev only)
+foobar db sync --force                    # bypass destructive-change guard
 
-# Explain a query plan
+# Seeders.
+foobar db seed
+foobar db reset                           # drop + recreate all tables from models
+foobar db fresh                           # reset + migrate (or reset + create) + seed
+
+# Introspection.
+foobar db indexes                         # declared vs. actual indexes
+foobar db indexes --missing               # exit 1 if any declared index is missing (CI)
+foobar db indexes --extra                 # indexes present in DB but not declared
+foobar db indexes --json                  # machine-readable output
 foobar db explain 'SELECT * FROM orders WHERE user_id = ? AND status = ?' \
   --bind 42 --bind pending
-foobar db explain 'SELECT ...' --analyze   # EXPLAIN ANALYZE on Postgres
+foobar db explain 'SELECT ...' --analyze  # EXPLAIN ANALYZE on Postgres
 ```
 
-`foobar db indexes` compares indexes declared in your models (via `Field.index()`, `Field.unique()`, `static indexes`, `static uniques`, and auto-FK indexes) against `sqlite_master` / `pg_indexes` / `SHOW INDEX` on the running database. Combined with `--missing` and a non-zero exit code, it works as a CI guard against forgetting to create declared indexes.
+**Migration commands** — see [Database migrations](./database/migrations.md)
+for the full workflow. Quick sketch:
 
-`foobar db explain` runs the driver-appropriate EXPLAIN and prints the query plan. Use it to confirm that a query is hitting the index you expect. On SQLite, plans look like `SEARCH orders USING INDEX idx_orders_user_id (user_id=?)`.
+- `foobar db make` diffs your models against the last snapshot and writes
+  a migration file with the delta. Refuses destructive changes without
+  `--allow-destructive`.
+- `foobar db make --name <name>` writes a blank migration for data
+  backfills or hand-written SQL.
+- `foobar db migrate` applies pending migrations in order, tracked in the
+  `_foobar_migrations` table.
+- `foobar db rollback` undoes the last batch.
+- `foobar db sync` is the local prototyping shortcut — no migration files,
+  just runs `MikroORM.schema.update()`. Refuses to run with
+  `NODE_ENV=production` and refuses destructive changes without
+  `--force`.
 
-See [`docs/orm/getting-started.md#indexes`](./orm/getting-started.md#indexes) for the model-side index API.
+**Introspection commands.** `foobar db indexes` compares indexes declared
+in your models (via `Field.index()`, `Field.unique()`, `static indexes`,
+`static uniques`, and auto-FK indexes) against `sqlite_master` /
+`pg_indexes` / `SHOW INDEX` on the running database. Combined with
+`--missing` and a non-zero exit code, it works as a CI guard against
+forgetting to create declared indexes.
+
+`foobar db explain` runs the driver-appropriate `EXPLAIN` and prints the
+query plan. On SQLite, plans look like
+`SEARCH orders USING INDEX idx_orders_user_id (user_id=?)`.
+
+See [`docs/orm/getting-started.md#indexes`](./orm/getting-started.md#indexes)
+for the model-side index API.
 
 ## Options
 

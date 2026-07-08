@@ -236,6 +236,21 @@ class Post extends Model {
 }
 ```
 
+### Applying schema changes
+
+Once your models are set up, get their tables into the database:
+
+- **File migrations (recommended):** `foobar db make` scans the diff between
+  your models and the last applied snapshot, writes a migration file, and
+  `foobar db migrate` applies it. See
+  [Database migrations](../database/migrations.md).
+- **Dev shortcut:** `foobar db sync` applies the diff directly. Fast for
+  local prototyping, refuses to run in production, refuses destructive
+  changes without `--force`.
+
+The framework never auto-syncs your schema at server boot when migration
+files exist.
+
 ## Retrieving Models
 
 ```js
