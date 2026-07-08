@@ -29,7 +29,7 @@ Mailer.configure({ driver: 'array' })
 |--------|-------------|
 | `log` | Writes emails to `storage/logs/mail.log` (default) |
 | `array` | Stores emails in memory (for testing) |
-| `smtp` | Sends via SMTP using nodemailer |
+| `smtp` | Sends via SMTP using emailjs |
 
 ## Basic Usage
 
