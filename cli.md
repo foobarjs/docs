@@ -12,7 +12,13 @@ foobar [command] [options]
 
 ### `foobar new <name>`
 
-Create a new foobarjs project with the full directory structure:
+Create a new foobarjs project. Handles the full setup end-to-end:
+
+1. Prompts for admin name, email, and password.
+2. Writes the project skeleton.
+3. Generates a secure `APP_SECRET` into `.env`.
+4. Runs `npm install`.
+5. Creates the database schema and inserts the admin user.
 
 ```bash
 foobar new my-blog
@@ -20,7 +26,34 @@ cd my-blog
 foobar serve
 ```
 
-Generates: `package.json`, `.env`, `config/`, `app/controllers/`, `app/models/`, `app/views/`, `public/`, `test/`, `db/`.
+Then log in at <http://localhost:3000/admin>.
+
+**Non-interactive** (CI, scripts):
+
+```bash
+foobar new my-blog \
+  --admin-name "Alice" \
+  --admin-email "alice@example.com" \
+  --admin-password "supersecret"
+
+# Or accept defaults (admin@example.com / password):
+foobar new my-blog --yes
+```
+
+**Opt-out flags:**
+
+| Flag | Effect |
+|------|--------|
+| `-y, --yes` | Skip prompts, use defaults for admin fields not passed as flags. |
+| `--admin-name <name>` | Admin display name. |
+| `--admin-email <email>` | Admin email (login identifier). |
+| `--admin-password <pass>` | Admin password (min 8 chars in interactive mode). |
+| `--skip-install` | Don't run `npm install`. Implies `--skip-admin` (admin creation needs the framework installed). |
+| `--skip-admin` | Scaffold and install, but don't create the admin user. Register users yourself via `/register` or a seeder. |
+
+**What the skeleton includes:** `package.json`, `.env`, `.gitignore`,
+`config/`, `app/controllers/`, `app/models/`, `app/views/` (layout, home,
+error pages), `routes/web.js`, `public/`, `test/`, `db/`, `database/`.
 
 ### `foobar key:generate`
 
@@ -31,7 +64,9 @@ foobar key:generate
 # APP_SECRET=...
 ```
 
-Copy the printed value into your `.env` file. The auth plugin requires `APP_SECRET` to sign sessions.
+Copy the printed value into your `.env` file. `foobar new` runs this
+automatically; use `key:generate` for key rotation or when setting up an
+app that was scaffolded with `--skip-install`.
 
 ### `foobar serve`
 

@@ -12,28 +12,43 @@ Install the CLI globally, then scaffold:
 npm install -g github:foobarjs/foobarjs#v0.1.0
 foobar new my-app
 cd my-app
-npm install
+foobar serve
 ```
 
-This generates a complete project skeleton with the default directory
-structure, configuration files, a home controller, a welcome view, and a
-`routes/web.js` starter.
+`foobar new` does everything you need to get running:
 
-## Configure APP_SECRET
+1. Prompts for your first admin user (name, email, password).
+2. Writes the project skeleton (controllers, views, config, routes, etc.).
+3. Generates a secure `APP_SECRET` into `.env`.
+4. Runs `npm install`.
+5. Creates the database schema and inserts your admin user.
 
-The default skeleton includes `foobarjs/auth`, which requires an `APP_SECRET`
-environment variable to sign sessions. Generate one and add it to your `.env`
-file before starting the server:
+After it finishes, `foobar serve` starts the dev server. Log in at
+<http://localhost:3000/admin> with the credentials you provided.
+
+### Non-interactive scaffolding
+
+Skip the prompts by passing everything via flags — useful for CI, dotfile
+setups, or automation:
 
 ```bash
-foobar key:generate
+foobar new my-app \
+  --admin-name "Alice" \
+  --admin-email "alice@example.com" \
+  --admin-password "supersecret"
 ```
 
-Copy the printed value into `.env`:
+Or accept the defaults (admin@example.com / password) with `--yes`:
 
-```env
-APP_SECRET=...
+```bash
+foobar new my-app --yes
 ```
+
+### Opt-out flags
+
+- `--skip-install` skips `npm install`. Also skips admin creation (which
+  requires the framework to be installed).
+- `--skip-admin` skips admin creation and prompts.
 
 ## Starting the Development Server
 
@@ -41,21 +56,17 @@ APP_SECRET=...
 foobar serve
 ```
 
-By default the server runs on port 3000. You can specify a custom port:
+Runs on port 3000 by default. Override with `--port`, or enable file-watch
+auto-reload with `--watch`:
 
 ```bash
 foobar serve --port 8080
-```
-
-For development with auto-restart on file changes:
-
-```bash
 foobar serve --watch
 ```
 
 ## Next steps
 
-Your app is running at http://localhost:3000. Here's where to go next:
+Your app is running at <http://localhost:3000>. Here's where to go next:
 
 - **Customize the home page.** Edit `app/controllers/home.controller.js`
   and `app/views/home/index.html`.
@@ -71,14 +82,24 @@ Your app is running at http://localhost:3000. Here's where to go next:
   `foobar generate model Product --fields name:string,price:number,stock:number`
   creates `app/models/product.model.js`. Run `foobar db fresh` to reset the
   schema. See [ORM: getting started](./orm/getting-started.md).
-- **Explore the auto-admin panel.** Visit `/admin` (after creating a user
-  with `isAdmin: true`). Configure per-model UIs in `app/admin/`. See
-  [Admin panel](./admin-panel.md).
+- **Explore the auto-admin panel.** Visit `/admin` and log in with the
+  credentials you set during `foobar new`. Configure per-model UIs in
+  `app/admin/`. See [Admin panel](./admin-panel.md).
 - **Explore the auto-API docs.** Visit `/api/docs` for a Scalar UI of the
   REST endpoints auto-generated for your models. See [API](./api.md).
 - **Configuration.** Every subsystem is configured under `config/`. See
   [Configuration](./configuration.md).
 - **Directory tour.** See [Directory structure](./directory-structure.md).
+
+## Regenerating APP_SECRET
+
+If you ever need a fresh key (e.g., after rotating secrets):
+
+```bash
+foobar key:generate
+```
+
+Paste the printed value into `.env` as `APP_SECRET=...`.
 
 ## Manual Setup
 
@@ -113,4 +134,11 @@ foobar db fresh && foobar db seed
 foobar serve
 ```
 
-Open http://localhost:3000. Admin credentials: `admin@foobar.com / aaaaaaaa`.
+Open <http://localhost:3000>. Admin credentials: `admin@foobar.com / aaaaaaaa`.
+
+## See also
+
+- [Directory structure](./directory-structure.md)
+- [Configuration](./configuration.md)
+- [Routing](./routing.md)
+- [CLI](./cli.md)
