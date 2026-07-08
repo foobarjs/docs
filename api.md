@@ -1,45 +1,71 @@
 # API
 
-The `foobarjs/api` plugin generates a RESTful JSON API for all your models automatically.
+The `foobarjs/api` plugin generates a RESTful JSON API for every registered
+model automatically.
 
 ## Setup
 
-```json
-{
-  "plugins": ["foobarjs/api"]
+```js
+// config/app.js
+export default {
+  // ...
+  plugins: ['foobarjs/api'],
 }
 ```
 
-## Generated Endpoints
+## Generated endpoints
 
-All API routes are prefixed with `/api` (configurable):
+All API routes are prefixed with `/api` by default. Override with plugin
+options — see [Prefix](#prefix) below.
 
 | Method | URI | Description |
 |--------|-----|-------------|
-| GET | `/api/products` | List products |
-| GET | `/api/products/:id` | Show product |
-| POST | `/api/products` | Create product |
-| PUT | `/api/products/:id` | Update product |
-| DELETE | `/api/products/:id` | Delete product |
+| GET | `/api/<tableName>` | List (paginated when `?page=` is provided) |
+| GET | `/api/<tableName>/:id` | Show |
+| POST | `/api/<tableName>` | Create — returns 201 |
+| PUT | `/api/<tableName>/:id` | Update |
+| DELETE | `/api/<tableName>/:id` | Delete |
 
-## Query Parameters
+The URL segment is the model's `getTableName()`. `Product` → `/api/products`,
+`OrderItem` → `/api/order_items`.
+
+## Query parameters
 
 ### Listing
 
 ```
-GET /api/products?include=category&fields=id,name,price&filter[published]=true&sort=-price&page=2&perPage=20
+GET /api/products?include=category&filter[published]=true&sort=-price&page=2&perPage=20
 ```
 
 | Parameter | Description |
 |-----------|-------------|
 | `include` | Comma-separated relation names to eager load |
-| `fields` | Comma-separated columns to return |
 | `filter[field]` | Filter by field value |
 | `sort` | Field to sort by. Prefix with `-` for descending |
-| `page` | Page number (default: 1) |
-| `perPage` | Items per page (default: 15) |
+| `page` | Page number — triggers paginated response shape |
+| `perPage` | Items per page (default: 15, only used when `page` is set) |
 
-### Response Format
+## Response shapes
+
+### List — without `?page=`
+
+Returns a bare array of the model (or an array of serializer output if a
+serializer is defined for the model):
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Wireless Headphones",
+    "price": 79.99,
+    "category": 1
+  }
+]
+```
+
+### List — with `?page=`
+
+Returns a `{ data, meta }` envelope:
 
 ```json
 {
@@ -52,38 +78,46 @@ GET /api/products?include=category&fields=id,name,price&filter[published]=true&s
     }
   ],
   "meta": {
-    "total": 10,
-    "page": 1,
-    "perPage": 15,
-    "lastPage": 1,
-    "from": 1,
-    "to": 10
+    "currentPage": 2,
+    "lastPage": 5,
+    "perPage": 20,
+    "total": 92,
+    "from": 21,
+    "to": 40
   }
 }
 ```
 
-### Single Resource
+### Show / Create / Update
+
+Returns a bare object:
 
 ```json
 {
-  "data": {
-    "id": 1,
-    "name": "Wireless Headphones",
-    "price": 79.99,
-    "description": "Bluetooth noise-cancelling headphones",
-    "category": 1,
-    "created_at": "...",
-    "updated_at": "..."
-  }
+  "id": 1,
+  "name": "Wireless Headphones",
+  "price": 79.99,
+  "description": "Bluetooth noise-cancelling headphones",
+  "category": 1,
+  "created_at": "...",
+  "updated_at": "..."
 }
 ```
 
-## Creating & Updating
+### Delete
+
+```json
+{ "message": "Deleted" }
+```
+
+## Creating and updating
 
 Send a JSON body with the appropriate fields:
 
-```json
+```
 POST /api/products
+Content-Type: application/json
+
 {
   "name": "New Product",
   "slug": "new-product",
@@ -92,9 +126,11 @@ POST /api/products
 }
 ```
 
-### Validation Errors
+Returns HTTP 201 with the created object.
 
-Validation failures return 422 with error details:
+### Validation errors
+
+Validation failures return 422:
 
 ```json
 {
@@ -106,32 +142,72 @@ Validation failures return 422 with error details:
 }
 ```
 
+See [Validation](./validation.md) for how the underlying errors are produced.
+
+### Not found
+
+`GET /api/products/9999` on a missing id returns 404:
+
+```json
+{ "error": "Not found" }
+```
+
+## Prefix
+
+Instantiate `ApiPlugin` explicitly with options to override the prefix:
+
+```js
+// config/app.js
+import ApiPlugin from 'foobarjs/api'
+
+export default {
+  // ...
+  plugins: [
+    'foobarjs/auth',
+    new ApiPlugin({ prefix: '/v2' }),
+  ],
+}
+```
+
+Endpoints move to `/v2/<tableName>`.
+
 ## Serializers
 
-Create serializer classes in `app/serializers/` to customize API output:
+Create serializer classes in `app/serializers/` to shape API output. The
+`foobarjs/api` plugin auto-loads a serializer per model based on filename:
+`Product` → `app/serializers/product.serializer.js` (lowercased class name).
 
 ```js
 // app/serializers/product.serializer.js
 import { Serializer } from 'foobarjs/serialization'
 
-export default class ProductSerializer extends Serializer {
+class ProductSerializer extends Serializer {
   static fields = ['id', 'name', 'price', 'slug']
   static include = {
     category: ['id', 'name'],
   }
 }
+
+export default ProductSerializer
 ```
 
-Serializers are auto-discovered and applied by the API plugin.
+If no serializer file exists, the model's `toJSON()` is used, which respects
+`Field.string().hidden()` and `static appends`.
 
-## API Documentation
+## API documentation
 
-The `foobarjs/api-docs` plugin generates OpenAPI 3.1.0 documentation automatically:
+The `foobarjs/api-docs` plugin generates OpenAPI 3.1.0 documentation
+automatically:
 
-```json
-{
-  "plugins": ["foobarjs/api-docs"]
-}
+```js
+plugins: ['foobarjs/api', 'foobarjs/api-docs']
 ```
 
-Access the docs at `/api/docs`. A machine-readable OpenAPI spec is available at `/api/docs.json`. The documentation UI uses Scalar for an interactive experience.
+Access the docs at `/api/docs` (Scalar UI). A machine-readable OpenAPI spec
+is available at `/api/docs.json`.
+
+## See also
+
+- [Serialization](./serialization.md)
+- [Validation](./validation.md)
+- [Conventions](./conventions.md#auto-rest-api)

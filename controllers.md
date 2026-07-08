@@ -89,6 +89,22 @@ Automatically renders `products/index.html` with `{ products }` and
 returns JSON. This makes the same controller action serve HTML browsers
 and API clients from one implementation.
 
+## Auto response contract
+
+The value returned from a controller action is coerced into an HTTP response
+by the framework:
+
+| Return value | Framework behavior |
+|--------------|--------------------|
+| A `Response` object | Sent as-is. |
+| `undefined` or `null` | `204 No Content`. |
+| An object or array | Looks for `app/views/<controller>/<action>.html`. If found, renders it with the value bound to a data key (see mapping above). Otherwise returns JSON. |
+| A string or primitive | Sent as plain text (`c.text(String(value))`). |
+
+The `<controller>` folder name is derived from the class name with the
+`Controller` suffix stripped and lowercased. `ProductsController` →
+`products`. This is independent of the filename.
+
 ## RESTful actions
 
 Controllers follow REST by convention. Define only the actions you need —

@@ -28,6 +28,7 @@ foobarjs is opinionated the way Laravel is opinionated.
 
 - [Installation](./installation.md)
 - [Directory structure](./directory-structure.md)
+- [Conventions](./conventions.md)
 - [Configuration](./configuration.md)
 - [Lifecycle](./lifecycle.md)
 - [CLI](./cli.md)

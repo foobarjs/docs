@@ -198,13 +198,30 @@ Rule of thumb: **index every column you filter (`WHERE`) or sort (`ORDER BY`) on
 
 ### Table Name
 
-By default, the table name is the snake_case plural of the class name (e.g., `Product` → `products`, `Category` → `categories`). Override with `static tableName`:
+The default table name is derived from the class name: snake-case, plus a
+naive trailing `s`. So `Product` → `products`, `OrderItem` → `order_items`,
+and `User` → `users`.
+
+The framework does **not** run English pluralization heuristics. Words that
+don't pluralize with a bare `+s` need an override:
+
+| Class | Default | Reality |
+|-------|---------|---------|
+| `Product` | `products` | correct |
+| `OrderItem` | `order_items` | correct |
+| `Category` | `categorys` | needs override → `categories` |
+| `Person` | `persons` | needs override → `people` |
+| `Bus` | `buss` | needs override → `buses` |
+
+Set `static tableName` explicitly whenever the default is wrong:
 
 ```js
-export default class Category extends Model {
+class Category extends Model {
   static tableName = 'categories'
-  static schema = { ... }
+  static schema = { /* ... */ }
 }
+
+export default Category
 ```
 
 ### Timestamps & Soft Deletes

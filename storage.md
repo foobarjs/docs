@@ -1,6 +1,7 @@
 # Storage
 
-foobarjs provides a filesystem abstraction for managing file uploads and storage.
+foobarjs provides a filesystem abstraction for managing file uploads and
+storage.
 
 ## Configuration
 
@@ -15,39 +16,50 @@ export default {
 }
 ```
 
-## Basic Usage
+The default `local` disk stores files under `public/uploads/` regardless of
+the `root` value. To use a different filesystem path, register a custom
+`LocalDisk` — see [Custom disks](#custom-disks) below.
+
+## Basic usage
 
 ```js
-import { Storage } from 'foobarjs/queue'  // Available from 'foobarjs'
+import { Storage } from 'foobarjs/storage'
 
-// Write a file
 await Storage.put('avatars/user1.jpg', fileContents)
 
-// Read a file
 const contents = await Storage.get('avatars/user1.jpg')
 
-// Get file URL
 const url = Storage.url('avatars/user1.jpg')
-// → /uploads/avatars/user1.jpg
+// → /avatars/user1.jpg  (paths are already relative to public/)
 
-// Delete a file
 await Storage.delete('avatars/user1.jpg')
 ```
 
-## Using a Specific Disk
+`Storage` is also re-exported from the flat `foobarjs` entry:
+`import { Storage } from 'foobarjs'`.
+
+## Using a specific disk
 
 ```js
 const disk = Storage.disk('local')
 await disk.put('file.txt', 'content')
 ```
 
-## Custom Disks
+`Storage.put()`, `.get()`, `.url()`, `.delete()` all default to the disk
+named by `config.storage.default`.
 
-Register custom storage disks:
+## Custom disks
+
+Register custom storage disks (e.g., S3, GCS, or a `LocalDisk` with a
+non-default root):
 
 ```js
-import { Storage } from 'foobarjs/storage'
+import { Storage, LocalDisk } from 'foobarjs/storage'
 
+// Point local storage at a different filesystem path.
+Storage.registerDisk('local', new LocalDisk('/var/data/uploads'))
+
+// Or add a new S3 disk.
 class S3Disk {
   async put(path, contents) { /* upload to S3 */ }
   async get(path) { /* download from S3 */ }
@@ -58,9 +70,10 @@ class S3Disk {
 Storage.registerDisk('s3', new S3Disk())
 ```
 
-## Image Manipulation
+## Image manipulation
 
-If the `sharp` library is available, you can manipulate images:
+If the `sharp` library is available (it's an optional peer of `foobarjs`),
+you can manipulate images:
 
 ```js
 import { Storage } from 'foobarjs/storage'
@@ -69,3 +82,8 @@ const thumbnail = await Storage.image('photos/photo.jpg')
   .resize(200, 200)
   .toBuffer()
 ```
+
+## See also
+
+- [Conventions](./conventions.md#storage)
+- [Configuration](./configuration.md)

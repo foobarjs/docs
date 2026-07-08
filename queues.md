@@ -19,7 +19,7 @@ export default {
   default: process.env.QUEUE_CONNECTION || 'database',
   connections: {
     sync: { driver: 'sync' },
-    database: { driver: 'database', table: 'jobs', queue: 'default' },
+    database: { driver: 'database', queue: 'default' },
     redis: {
       driver: 'redis',
       connection: process.env.REDIS_QUEUE_CONNECTION || 'default',
@@ -28,7 +28,12 @@ export default {
 }
 ```
 
-The `database` driver stores jobs in a `jobs` table that is auto-created by the ORM. The `redis` driver requires `foobarjs/redis` and a running Redis server.
+The `database` driver stores queued jobs in the `queue_jobs` table and
+failed jobs in `failed_jobs`. Both tables are auto-registered by the queue
+plugin when the driver is `database` — you don't declare them yourself. The
+`redis` driver stores jobs in list keys named `queues:<queueName>` and
+failed jobs in `failed_queues:<queueName>`. Redis requires `foobarjs/redis`
+and a running server.
 
 ## Redis Connection
 
@@ -110,7 +115,8 @@ When a job exhausts its retries it is stored in the `failed_jobs` table (databas
 foobar queue:retry --queue=default --connection=database
 ```
 
-You can also retry, delete, or flush failed jobs from the admin panel at `/admin/failed-jobs`.
+You can also retry, delete, or flush failed jobs from the admin panel at
+`/admin/failed_jobs` (the URL follows the table name).
 
 ## Job Options
 
@@ -147,5 +153,11 @@ await Queue.flushFailed('default', 'redis')
 | Driver | Description |
 |--------|-------------|
 | `sync` | Runs jobs immediately in the request process. |
-| `database` | Stores jobs in a SQL table via MikroORM. |
-| `redis` | Stores jobs in Redis lists for high throughput. |
+| `database` | Stores queued jobs in `queue_jobs` and failed jobs in `failed_jobs` via MikroORM. |
+| `redis` | Stores jobs in Redis lists (`queues:<queue>`) for high throughput. |
+
+## See also
+
+- [Conventions](./conventions.md#queues)
+- [Admin panel](./admin-panel.md)
+- [Redis](./redis.md)
