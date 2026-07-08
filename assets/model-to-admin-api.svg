@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+    <filter id="shadowLg" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="540" fill="url(#bg)" rx="12"/>
+
+  <!-- Title -->
+  <text x="480" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Define a Model</text>
+  <text x="480" y="56" text-anchor="middle" font-size="13" fill="#64748b">foobarjs auto-generates an admin panel and a REST API</text>
+
+  <!-- ====== LEFT: Model Definition ====== -->
+  <g filter="url(#shadowLg)">
+    <rect x="30" y="72" width="340" height="440" rx="8" fill="#1e293b"/>
+    <rect x="30" y="72" width="340" height="36" rx="8" fill="#0f172a"/>
+    <rect x="30" y="96" width="340" height="12" fill="#0f172a"/>
+    <circle cx="48" cy="90" r="5" fill="#ef4444"/>
+    <circle cx="64" cy="90" r="5" fill="#eab308"/>
+    <circle cx="80" cy="90" r="5" fill="#22c55e"/>
+    <text x="120" y="95" font-size="11" fill="#94a3b8" font-weight="600">app/models/product.model.js</text>
+
+    <text x="50" y="130" font-size="13" fill="#cbd5e1">import { Model, Field } from 'foobarjs/orm'</text>
+
+    <text x="50" y="158" font-size="13" fill="#e2e8f0">class Product extends Model {</text>
+
+    <text x="64" y="182" font-size="13" fill="#818cf8">  static schema</text>
+    <text x="126" y="182" font-size="13" fill="#cbd5e1">= {</text>
+
+    <text x="78" y="206" font-size="13" fill="#f472b6">    name</text>
+    <text x="120" y="206" font-size="13" fill="#cbd5e1">:</text>
+    <text x="130" y="206" font-size="13" fill="#22c55e"> Field</text>
+    <text x="170" y="206" font-size="13" fill="#cbd5e1">.</text>
+    <text x="178" y="206" font-size="13" fill="#22c55e">string</text>
+    <text x="220" y="206" font-size="13" fill="#cbd5e1">()</text>
+    <text x="232" y="206" font-size="13" fill="#cbd5e1">.</text>
+    <text x="240" y="206" font-size="13" fill="#fbbf24">required</text>
+    <text x="292" y="206" font-size="13" fill="#cbd5e1">(),</text>
+
+    <text x="78" y="230" font-size="13" fill="#f472b6">    price</text>
+    <text x="120" y="230" font-size="13" fill="#cbd5e1">:</text>
+    <text x="130" y="230" font-size="13" fill="#22c55e"> Field</text>
+    <text x="170" y="230" font-size="13" fill="#cbd5e1">.</text>
+    <text x="178" y="230" font-size="13" fill="#22c55e">float</text>
+    <text x="210" y="230" font-size="13" fill="#cbd5e1">()</text>
+    <text x="222" y="230" font-size="13" fill="#cbd5e1">.</text>
+    <text x="230" y="230" font-size="13" fill="#fbbf24">required</text>
+    <text x="282" y="230" font-size="13" fill="#cbd5e1">(),</text>
+
+    <text x="78" y="254" font-size="13" fill="#f472b6">    category</text>
+    <text x="144" y="254" font-size="13" fill="#cbd5e1">:</text>
+    <text x="154" y="254" font-size="13" fill="#22c55e"> Field</text>
+    <text x="194" y="254" font-size="13" fill="#cbd5e1">.</text>
+    <text x="202" y="254" font-size="13" fill="#22c55e">enum</text>
+    <text x="230" y="254" font-size="13" fill="#cbd5e1">([</text>
+    <text x="242" y="254" font-size="13" fill="#fbbf24">'book'</text>
+    <text x="280" y="254" font-size="13" fill="#cbd5e1">,</text>
+    <text x="288" y="254" font-size="13" fill="#fbbf24">'music'</text>
+
+    <text x="78" y="274" font-size="13" fill="#cbd5e1">    ]),</text>
+    <text x="78" y="294" font-size="13" fill="#f472b6">    inStock</text>
+    <text x="130" y="294" font-size="13" fill="#cbd5e1">:</text>
+    <text x="140" y="294" font-size="13" fill="#22c55e"> Field</text>
+    <text x="180" y="294" font-size="13" fill="#cbd5e1">.</text>
+    <text x="188" y="294" font-size="13" fill="#22c55e">boolean</text>
+    <text x="232" y="294" font-size="13" fill="#cbd5e1">()</text>
+    <text x="244" y="294" font-size="13" fill="#cbd5e1">.</text>
+    <text x="252" y="294" font-size="13" fill="#fbbf24">default</text>
+    <text x="292" y="294" font-size="13" fill="#cbd5e1">(</text>
+    <text x="300" y="294" font-size="13" fill="#fbbf24">true</text>
+    <text x="328" y="294" font-size="13" fill="#cbd5e1">),</text>
+
+    <text x="78" y="318" font-size="13" fill="#f472b6">    description</text>
+    <text x="158" y="318" font-size="13" fill="#cbd5e1">:</text>
+    <text x="168" y="318" font-size="13" fill="#22c55e"> Field</text>
+    <text x="208" y="318" font-size="13" fill="#cbd5e1">.</text>
+    <text x="216" y="318" font-size="13" fill="#22c55e">text</text>
+    <text x="240" y="318" font-size="13" fill="#cbd5e1">()</text>
+    <text x="252" y="318" font-size="13" fill="#cbd5e1">.</text>
+    <text x="260" y="318" font-size="13" fill="#fbbf24">nullable</text>
+    <text x="308" y="318" font-size="13" fill="#cbd5e1">(),</text>
+
+    <text x="64" y="346" font-size="13" fill="#cbd5e1">  }</text>
+
+    <text x="64" y="370" font-size="13" fill="#cbd5e1">  static timestamps = true</text>
+    <text x="64" y="394" font-size="13" fill="#cbd5e1">}</text>
+
+    <text x="64" y="422" font-size="13" fill="#cbd5e1">export default Product</text>
+  </g>
+
+  <!-- ====== CENTER: Arrow + foobar badge ====== -->
+  <g>
+    <!-- Arrow line -->
+    <line x1="380" y1="280" x2="430" y2="280" stroke="url(#arrow)" stroke-width="3" stroke-linecap="round"/>
+    <polygon points="430,274 442,280 430,286" fill="url(#arrow)"/>
+
+    <!-- Badge -->
+    <rect x="385" y="168" width="56" height="56" rx="14" fill="url(#accent)" filter="url(#shadow)"/>
+    <text x="413" y="195" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="700">foobar</text>
+    <text x="413" y="209" text-anchor="middle" font-size="9" fill="#64748b">js</text>
+
+    <!-- "Auto-generates" label -->
+    <text x="413" y="248" text-anchor="middle" font-size="11" fill="#64748b" font-weight="500">auto-generates</text>
+  </g>
+
+  <!-- ====== RIGHT TOP: Admin Panel ====== -->
+  <g filter="url(#shadowLg)">
+    <rect x="450" y="72" width="480" height="226" rx="8" fill="#ffffff"/>
+    <rect x="450" y="72" width="480" height="36" rx="8" fill="#f1f5f9"/>
+    <rect x="450" y="96" width="480" height="12" fill="#f1f5f9"/>
+
+    <!-- Browser controls -->
+    <circle cx="468" cy="90" r="5" fill="#ef4444"/>
+    <circle cx="484" cy="90" r="5" fill="#eab308"/>
+    <circle cx="500" cy="90" r="5" fill="#22c55e"/>
+    <text x="596" y="95" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="600">Admin Panel — Products</text>
+
+    <!-- Breadcrumb -->
+    <text x="466" y="118" font-size="11" fill="#64748b">Home / Products</text>
+
+    <!-- Header -->
+    <text x="466" y="144" font-size="15" font-weight="700" fill="#0f172a">Products</text>
+    <rect x="860" y="130" width="56" height="26" rx="4" fill="#0f172a"/>
+    <text x="888" y="147" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600">+ New</text>
+
+    <!-- Table header -->
+    <rect x="466" y="160" width="450" height="1" fill="#e2e8f0"/>
+    <text x="466" y="178" font-size="11" fill="#64748b" font-weight="600">Name</text>
+    <text x="556" y="178" font-size="11" fill="#64748b" font-weight="600">Price</text>
+    <text x="636" y="178" font-size="11" fill="#64748b" font-weight="600">Category</text>
+    <text x="736" y="178" font-size="11" fill="#64748b" font-weight="600">In Stock</text>
+    <text x="836" y="178" font-size="11" fill="#64748b" font-weight="600">Created</text>
+    <rect x="466" y="184" width="450" height="1" fill="#e2e8f0"/>
+
+    <!-- Row 1 -->
+    <text x="466" y="200" font-size="12" fill="#0f172a" font-weight="500">Dune</text>
+    <text x="556" y="200" font-size="12" fill="#0f172a">$24.99</text>
+    <rect x="636" y="192" width="40" height="16" rx="3" fill="#f1f5f9"/>
+    <text x="656" y="204" text-anchor="middle" font-size="10" fill="#475569">book</text>
+    <circle cx="745" cy="200" r="5" fill="#22c55e"/>
+    <text x="836" y="200" font-size="11" fill="#64748b">2 days ago</text>
+    <rect x="466" y="210" width="450" height="1" fill="#f1f5f9"/>
+
+    <!-- Row 2 -->
+    <text x="466" y="226" font-size="12" fill="#0f172a" font-weight="500">Yankee Hotel Foxtrot</text>
+    <text x="556" y="226" font-size="12" fill="#0f172a">$14.99</text>
+    <rect x="636" y="218" width="40" height="16" rx="3" fill="#f1f5f9"/>
+    <text x="656" y="230" text-anchor="middle" font-size="10" fill="#475569">music</text>
+    <circle cx="745" cy="226" r="5" fill="#22c55e"/>
+    <text x="836" y="226" font-size="11" fill="#64748b">1 week ago</text>
+    <rect x="466" y="236" width="450" height="1" fill="#f1f5f9"/>
+
+    <!-- Row 3 -->
+    <text x="466" y="252" font-size="12" fill="#0f172a" font-weight="500">Gödel, Escher, Bach</text>
+    <text x="556" y="252" font-size="12" fill="#0f172a">$34.99</text>
+    <rect x="636" y="244" width="40" height="16" rx="3" fill="#f1f5f9"/>
+    <text x="656" y="256" text-anchor="middle" font-size="10" fill="#475569">book</text>
+    <circle cx="745" cy="252" r="5" fill="#22c55e"/>
+    <text x="836" y="252" font-size="11" fill="#64748b">3 weeks ago</text>
+
+    <!-- Footer -->
+    <rect x="450" y="270" width="480" height="28" rx="8" fill="#f8fafc"/>
+    <rect x="450" y="284" width="480" height="14" fill="#f8fafc"/>
+    <text x="466" y="288" font-size="11" fill="#64748b">Showing 1–3 of 12 products</text>
+    <rect x="860" y="278" width="26" height="18" rx="3" fill="#e2e8f0"/>
+    <rect x="892" y="278" width="26" height="18" rx="3" fill="#e2e8f0"/>
+    <text x="873" y="291" text-anchor="middle" font-size="10" fill="#475569">‹</text>
+    <text x="905" y="291" text-anchor="middle" font-size="10" fill="#0f172a">›</text>
+  </g>
+
+  <!-- ====== RIGHT BOTTOM: API Endpoints ====== -->
+  <g filter="url(#shadowLg)">
+    <rect x="450" y="312" width="480" height="200" rx="8" fill="#ffffff"/>
+    <rect x="450" y="312" width="480" height="36" rx="8" fill="#f1f5f9"/>
+    <rect x="450" y="336" width="480" height="12" fill="#f1f5f9"/>
+
+    <circle cx="468" cy="330" r="5" fill="#ef4444"/>
+    <circle cx="484" cy="330" r="5" fill="#eab308"/>
+    <circle cx="500" cy="330" r="5" fill="#22c55e"/>
+    <text x="610" y="335" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="600">API — Products</text>
+
+    <!-- Endpoint 1: GET /api/products -->
+    <rect x="466" y="362" width="210" height="24" rx="4" fill="#dcfce7"/>
+    <text x="474" y="379" font-size="11" fill="#15803d" font-weight="700">GET</text>
+    <text x="508" y="379" font-size="11" fill="#0f172a" font-family="monospace">/api/products</text>
+    <text x="694" y="379" font-size="10" fill="#64748b">→ list all products</text>
+
+    <!-- Endpoint 2: GET /api/products/:id -->
+    <rect x="466" y="392" width="210" height="24" rx="4" fill="#dcfce7"/>
+    <text x="474" y="409" font-size="11" fill="#15803d" font-weight="700">GET</text>
+    <text x="508" y="409" font-size="11" fill="#0f172a" font-family="monospace">/api/products/</text>
+    <text x="612" y="409" font-size="11" fill="#0f172a" font-family="monospace" font-style="italic">id</text>
+    <text x="694" y="409" font-size="10" fill="#64748b">→ get one product</text>
+
+    <!-- Endpoint 3: POST /api/products -->
+    <rect x="466" y="422" width="210" height="24" rx="4" fill="#fef3c7"/>
+    <text x="474" y="439" font-size="11" fill="#b45309" font-weight="700">POST</text>
+    <text x="522" y="439" font-size="11" fill="#0f172a" font-family="monospace">/api/products</text>
+    <text x="694" y="439" font-size="10" fill="#64748b">→ create a product</text>
+
+    <!-- Endpoint 4: PUT /api/products/:id -->
+    <rect x="466" y="452" width="210" height="24" rx="4" fill="#fef3c7"/>
+    <text x="474" y="469" font-size="11" fill="#b45309" font-weight="700">PUT</text>
+    <text x="508" y="469" font-size="11" fill="#0f172a" font-family="monospace">/api/products/</text>
+    <text x="612" y="469" font-size="11" fill="#0f172a" font-family="monospace" font-style="italic">id</text>
+    <text x="694" y="469" font-size="10" fill="#64748b">→ update a product</text>
+
+    <!-- Endpoint 5: DELETE /api/products/:id -->
+    <rect x="466" y="482" width="210" height="24" rx="4" fill="#fee2e2"/>
+    <text x="474" y="499" font-size="11" fill="#dc2626" font-weight="700">DELETE</text>
+    <text x="522" y="499" font-size="11" fill="#0f172a" font-family="monospace">/api/products/</text>
+    <text x="626" y="499" font-size="11" fill="#0f172a" font-family="monospace" font-style="italic">id</text>
+    <text x="694" y="499" font-size="10" fill="#64748b">→ delete a product</text>
+  </g>
+</svg>

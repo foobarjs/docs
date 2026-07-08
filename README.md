@@ -24,6 +24,8 @@ foobarjs is opinionated the way Laravel is opinionated.
 - **Laravel-inspired, not Laravel-clone.** Ergonomics translated to
   idiomatic ESM Node — not PHP-in-JavaScript.
 
+![Define a model — foobarjs auto-generates an admin panel and REST API endpoints](./assets/model-to-admin-api.svg)
+
 ## Getting started
 
 - [Installation](./installation.md)
