@@ -1,107 +1,128 @@
 # Controllers
 
-Controllers group related request handling logic into a single class. They are placed in `app/controllers/` and named with the `.controller.js` suffix.
+Controllers group related request handling logic into a single class. They
+live in `app/controllers/` and are named with the `.controller.js` suffix.
 
-## Basic Controller
+## The Controller base class
+
+Every controller extends `Controller` from `foobarjs/core`. The base class
+provides response helpers (`this.render`, `this.json`, `this.redirect`, ...),
+convenience accessors (`this.getLoggedInUser()`, `this.params()`,
+`this.body()`), and the Hono context itself as `this.c`.
 
 ```js
 // app/controllers/home.controller.js
 import { Controller } from 'foobarjs/core'
 
-export default class HomeController extends Controller {
-  async index(c) {
-    return c.render('home/index', {
-      title: 'Welcome',
-    })
+class HomeController extends Controller {
+  async index() {
+    return this.render('home/index', { title: 'Welcome' })
   }
 }
+
+export default HomeController
 ```
 
-## Controller Methods
+Controller methods do not take the context as a parameter — it's already on
+`this.c`. Access request data via `this.params()`, `this.query()`,
+`this.body()`, or drop down to `this.c.req.header('X-Custom')` when you need
+Hono-native access.
 
-Each method receives the Hono `Context` object (`c`) and should return a response. Available response types:
+## Response helpers
+
+| Helper | Returns |
+|--------|---------|
+| `this.render(template, data)` | HTML rendered from `app/views/<template>.html`. |
+| `this.json(data)` | JSON response (status 200). |
+| `this.json(data, statusCode)` | JSON response with an explicit status. |
+| `this.text(body)` / `this.text(body, status)` | Plain text response. |
+| `this.html(body)` | Raw HTML string. |
+| `this.html(template, data)` | Same as `this.render(template, data)`. |
+| `this.redirect(path)` / `this.redirect(path, status)` | HTTP redirect (default 302). |
+| `this.view(template, data)` | Alias for `this.render()`. |
+| `this.flash(key, message)` | Set a one-shot session flash. Chainable. |
+
+## Convenience accessors
+
+| Accessor | What it returns |
+|----------|-----------------|
+| `this.c` | Raw Hono context. Drop down here for anything the helpers don't cover. |
+| `this.request` | Alias for `this.c.req`. |
+| `this.response` | Alias for `this.c.res`. |
+| `this.params()` | Route parameters (`{ id: '5' }`). |
+| `this.query()` | Query string (`{ page: '2' }`). |
+| `this.body()` | Parsed request body. Tries JSON first, then form-encoded. |
+| `this.getLoggedInUser()` | The authenticated user, or `null`. |
+| `this.isLoggedIn()` | Boolean. |
+| `this.validate(FormRequestClass)` | Runs the given `FormRequest`, returns it. |
+
+## Convention-based views
+
+If a controller action returns data (not a `Response`), foobarjs looks for a
+matching view template and renders it. Fallback is JSON.
+
+| Action | View path | Data key |
+|--------|-----------|----------|
+| `index` | `app/views/<controller>/index.html` | plural (`products`) |
+| `show` | `app/views/<controller>/show.html` | singular (`product`) |
+| `edit` | `app/views/<controller>/edit.html` | singular |
+| `new` | `app/views/<controller>/new.html` | singular |
+| `destroy` | — | typically redirects |
+| `store`, `update` | — | typically redirect |
+
+Example:
 
 ```js
-// Render a view
-return c.render('products/index', { products })
-
-// Return JSON
-return c.json({ message: 'Hello' })
-
-// Redirect
-return c.redirect('/login')
-
-// Text response
-return c.text('Not found', 404)
-
-// Empty body with status
-return c.body(null, 204)
-```
-
-## Convention-Based Views
-
-If a controller method returns data instead of a `Response`, foobarjs checks for a matching view and renders it automatically. This follows the convention:
-
-| Controller | Action | View Path | Data Key |
-|------------|--------|-----------|----------|
-| `ProductsController` | `index` | `app/views/products/index.html` | `products` |
-| `ProductsController` | `show` | `app/views/products/show.html` | `product` |
-| `ProductsController` | `edit` | `app/views/products/edit.html` | `product` |
-| `ProductsController` | `new` | `app/views/products/new.html` | `product` |
-
-For example, this controller:
-
-```js
-class ProductsController {
-  async index(c) {
+class ProductsController extends Controller {
+  async index() {
     return Product.all()
   }
 
-  async show(c) {
-    return Product.find(c.req.param('id'))
+  async show() {
+    return Product.find(this.params().id)
   }
 }
 ```
 
-Automatically renders `products/index.html` with `{ products }` and `products/show.html` with `{ product }`.
+Automatically renders `products/index.html` with `{ products }` and
+`products/show.html` with `{ product }` if those views exist, otherwise
+returns JSON. This makes the same controller action serve HTML browsers
+and API clients from one implementation.
 
-If no matching view exists, the data is returned as JSON instead. This makes the same controller action serve both HTML and API clients depending on whether the view file exists.
+## RESTful actions
 
-### Action-to-Data-Key Mapping
+Controllers follow REST by convention. Define only the actions you need —
+missing actions produce no route (a 404), not a 500.
 
-- `index` uses the controller name as-is (plural): `products`
-- `show`, `edit`, `new`, and `destroy` use the singular form: `product`
-- `store` and `update` typically redirect, so they are not auto-rendered
+| Method | HTTP + URL |
+|--------|------------|
+| `index()` | `GET /base` |
+| `new()` | `GET /base/new` |
+| `store()` | `POST /base` |
+| `show()` | `GET /base/:id` |
+| `edit()` | `GET /base/:id/edit` |
+| `update()` | `PUT /base/:id` |
+| `destroy()` | `DELETE /base/:id` |
 
-## Request Data
+The `/base` prefix comes from the filename (`products.controller.js` → `/products`)
+or from an explicit registration in `routes/web.js`. See [Routing](./routing.md).
 
-Access request data from the Hono context:
+## Working with the raw context
+
+Any Hono API you need is on `this.c`:
 
 ```js
-// Route parameters
-c.req.param('id')
-
-// Query parameters
-c.req.query('page')
-
-// Body (parsed from JSON or form data)
-const body = await c.req.parseBody()
-// or for JSON:
-const json = await c.req.json()
+async show() {
+  const ifNoneMatch = this.c.req.header('If-None-Match')
+  const url = new URL(this.c.req.url)
+  this.c.header('Cache-Control', 'max-age=60')
+  return this.render('products/show', { product })
+}
 ```
 
-## Controller Conventions
+## Next steps
 
-Controllers follow a RESTful pattern with these methods:
-
-| Method | Description |
-|--------|-------------|
-| `index(c)` | List all resources |
-| `show(c)` | Show a single resource |
-| `new(c)` | Show create form |
-| `store(c)` | Handle create submission |
-| `edit(c)` | Show edit form |
-| `update(c)` | Handle update submission |
-| `destroy(c)` | Handle deletion |
-
-Not all methods are required. Only defined methods get routes registered.
+- Add routes for these controllers: [Routing](./routing.md)
+- Render templates: [Views](./views.md)
+- Validate input: [Validation](./validation.md)
+- Handle errors: [Error handling](./error-handling.md)

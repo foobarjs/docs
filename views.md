@@ -1,33 +1,49 @@
 # Views
 
-foobarjs uses Edge.js templates (`.html` files) with a Blade-like syntax. Views are stored in `app/views/` and use `@` directives for control structures.
+foobarjs ships an Edge-inspired template engine (`.html` files with `@`
+directives and `{{ }}` interpolation). Templates live in `app/views/` and are
+rendered by controllers via `this.render(...)` or by convention.
 
-## Rendering Views
+## Rendering views
 
-Inside a controller method, use `c.render()`:
+Inside a controller method (extending `Controller`):
 
 ```js
-async index(c) {
-  return c.render('products/index', {
+async index() {
+  return this.render('products/index', {
     products: await Product.all(),
     title: 'Products',
   })
 }
 ```
 
-Templates are referenced by their path relative to `app/views/`, without the extension.
+Templates are referenced by path relative to `app/views/`, without the
+extension. `'products/index'` renders `app/views/products/index.html`.
 
-## Convention-Based Rendering
+Outside a controller (e.g. from an inline callback in `routes/web.js`):
 
-If a controller method returns data instead of explicitly calling `c.render()`, foobarjs looks for a matching view based on the controller and action names.
+```js
+router.get('/pricing', (c) => c.render('marketing/pricing', { plans }))
+```
 
-Given `ProductsController.show` returning a single product, the framework looks for `app/views/products/show.html` and renders it with `{ product }`.
+`c.render(template, data)` is the underlying primitive — `this.render()` is a
+thin wrapper around it.
+
+## Convention-based rendering
+
+If a controller action returns data instead of a `Response`, foobarjs looks
+for a matching view and renders it automatically.
+
+`ProductsController.show` returning a single product → looks for
+`app/views/products/show.html` and renders it with `{ product }`.
+
+If no matching view exists, the data becomes JSON.
 
 See [Controllers](./controllers.md#convention-based-views) for the full mapping.
 
-## Error Views
+## Error views
 
-You can override the built-in error pages by creating views in `app/views/errors/`:
+Override the built-in error pages by dropping files in `app/views/errors/`:
 
 ```
 app/views/errors/404.html
@@ -36,13 +52,13 @@ app/views/errors/403.html
 app/views/errors/419.html
 ```
 
-For example:
+Example:
 
 ```html
 @layout('layouts/app')
 
 @section('content')
-  <h1>{{ status }} - Page Not Found</h1>
+  <h1>{{ status }} — Page Not Found</h1>
   <p>The page you requested could not be found.</p>
   @if(requestId)<p>Request ID: {{ requestId }}</p>@endif
 @endsection
@@ -54,34 +70,35 @@ Lookup order for an error of status `N`:
 2. `errors/<class>xx.html` (e.g. `5xx.html` for any 5-series)
 3. `errors/error.html`
 4. `errors/500.html` (only for 5xx)
-5. Built-in fallback page (production) or the Whoops-style dev page (development)
+5. Built-in fallback page (production) or the diagnostic page (development)
 
-The following variables are available in error views:
+Variables available in error views:
 
 | Variable | Description |
 |----------|-------------|
 | `status` | HTTP status code |
 | `message` | Publicly-safe error message |
-| `requestId` | Correlation ID (also exposed via `X-Request-Id` header) |
+| `requestId` | Correlation ID (also on `X-Request-Id` response header) |
 | `error` | The original error object |
-| `stack` | Stack trace (in development only) |
+| `stack` | Stack trace (development only) |
 
-See [Error Handling](./error-handling.md) for the full pipeline.
+See [Error handling](./error-handling.md) for the full pipeline.
 
-## View Globals
+## View globals
 
-Every render receives these globals automatically:
+Every render receives these automatically:
 
 | Global | Description |
 |--------|-------------|
-| `user` | Current authenticated user or `null` |
+| `user` | Current authenticated user, or `null` |
 | `loggedIn` | Boolean |
 | `cartCount` | Sum of `quantity` across `session.cart` |
-| `flash` | Object of session flash messages (`{ success, error, ... }`) |
+| `flash` | Flash messages (`{ success, error, ... }`) |
 | `errors` | Flashed validation errors (`{ field: ['msg'], ... }`) |
-| `old(key, fallback = '')` | Helper for reading previously-submitted input |
+| `old(key, fallback = '')` | Read previously-submitted input |
 
-`errors` and `old` are populated automatically after a `ValidationError` redirect. Use them for form re-population and inline messages:
+`errors` and `old` are populated automatically after a `ValidationError`
+redirect. Use them to re-populate forms and render inline messages:
 
 ```html
 <input name="email"
@@ -93,9 +110,11 @@ Every render receives these globals automatically:
 @enderror
 ```
 
-The `@error('field') ... @enderror` directive renders its body only when the field has one or more errors. Inside the block a `message` local is bound to the first error message.
+The `@error('field') ... @enderror` directive renders its body only when the
+field has one or more errors. Inside the block, a `message` local is bound to
+the first error message.
 
-## Template Syntax
+## Template syntax
 
 ### Variables
 
@@ -104,7 +123,7 @@ The `@error('field') ... @enderror` directive renders its body only when the fie
 <p>{{ product.description }}</p>
 ```
 
-Variables are automatically HTML-escaped. For raw (unescaped) output:
+Variables are HTML-escaped. For raw output:
 
 ```html
 {!! html_content !!}
@@ -171,19 +190,9 @@ Variables are automatically HTML-escaped. For raw (unescaped) output:
   @csrf
   <input name="email">
 </form>
-@csrf renders as: <input type="hidden" name="_csrf" value="...">
 ```
 
-## Auto-Injected Variables
-
-The following variables are automatically available in every view:
-
-| Variable | Description |
-|----------|-------------|
-| `user` | The currently authenticated user (or null) |
-| `loggedIn` | Boolean, whether the user is authenticated |
-| `cartCount` | Number of items in the cart (from session) |
-| `flash` | Object containing flash messages from the session |
+`@csrf` renders as `<input type="hidden" name="_csrf" value="...">`.
 
 ## Components
 
@@ -193,23 +202,17 @@ The following variables are automatically available in every view:
 @endcomponent
 ```
 
-Components are rendered by matching component files or inline handlers. Alpine.js component classes can provide reactive data.
+Components live in `app/views/components/` and receive the passed data plus
+`{{ $slot }}` for the wrapped body.
 
-## Alpine.js Integration
+## Client-side interactivity
 
-foobarjs is designed to work with Alpine.js for client-side interactivity:
+foobarjs is unopinionated about client-side JavaScript. Add whichever
+library you prefer (Alpine.js, htmx, Stimulus, Vue islands, plain vanilla)
+by including it in your layout or bundling it into `public/`.
 
-```html
-<div x-data="{ open: false }">
-  <button @click="open = !open">Toggle</button>
-  <div x-show="open" x-transition>
-    Content
-  </div>
-</div>
-```
+## Next steps
 
-Include Alpine.js via CDN in your layout or bundle it with your assets.
-
-```html
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-```
+- Add controllers that render these views: [Controllers](./controllers.md)
+- Handle form submissions and validation: [Validation](./validation.md)
+- Sessions and flash messages: [Session](./session.md)

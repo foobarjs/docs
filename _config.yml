@@ -1,0 +1,17 @@
+theme: jekyll-theme-cayman
+title: foobarjs documentation
+description: Batteries-included Node.js MVC framework inspired by Laravel
+show_downloads: false
+
+exclude:
+  - .github
+  - LICENSE
+  - AGENTS.md
+  - README.md.bak
+
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
