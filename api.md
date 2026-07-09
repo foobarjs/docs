@@ -29,6 +29,77 @@ options — see [Prefix](#prefix) below.
 The URL segment is the model's `getTableName()`. `Product` → `/api/products`,
 `OrderItem` → `/api/order_items`.
 
+## Authentication
+
+**The API is authenticated by default.** Out of the box every endpoint requires
+an authenticated request (`auth: 'session'`), so registering `foobarjs/api`
+without any config does *not* expose your data publicly.
+
+Authentication is resolved by the `foobarjs/auth` plugin, which must be
+registered **before** `foobarjs/api`:
+
+```js
+// config/app.js
+export default {
+  plugins: ['foobarjs/auth', 'foobarjs/api'],
+}
+```
+
+`foobarjs/auth` populates the current user from either a session cookie or an
+`Authorization: Bearer <token>` header (see
+[Authentication](./authentication.md)); the API gate just requires one to be
+present.
+
+### Access rules
+
+Configure access in `config/api.js`. Config values override the plugin defaults:
+
+```js
+// config/api.js
+export default {
+  // Storefront catalog: anyone can read, only authenticated users can write.
+  auth: { read: false, write: 'session' },
+
+  // Per-resource overrides, keyed by table name.
+  models: {
+    users: 'session',
+    personal_access_tokens: 'session',
+  },
+}
+```
+
+A rule can be:
+
+| Rule | Meaning |
+|------|---------|
+| `'session'` / `true` / `'any'` | Require any authenticated user (session cookie **or** Bearer token) |
+| `'token'` | Require a Bearer personal access token specifically |
+| `false` / `'public'` / `'none'` | Public — no authentication |
+| `{ read, write }` | Different rules for reads (`GET`) vs writes (`POST`/`PUT`/`DELETE`) |
+
+Resolution precedence (most specific wins):
+
+1. `models[tableName]` in `config/api.js`
+2. `static apiAuth` on the model class
+3. the top-level `auth` option
+
+The gate **fails closed**: if `foobarjs/auth` is not registered there is never a
+current user, so every non-public rule rejects with `401`.
+
+```js
+// Per-model override on the model itself
+class AuditLog extends Model {
+  static apiAuth = 'token'   // this resource always requires a Bearer token
+  static schema = { /* ... */ }
+}
+```
+
+A request that fails its rule gets HTTP `401`:
+
+```json
+{ "error": "Unauthenticated" }
+```
+
 ## Query parameters
 
 ### Listing
@@ -127,6 +198,12 @@ Content-Type: application/json
 ```
 
 Returns HTTP 201 with the created object.
+
+> **Mass assignment is guarded.** Both `POST` and `PUT` only accept fields the
+> model marks fillable. Structural and privileged columns (`id`, timestamps, and
+> anything in a model's `static guarded`) are silently ignored, so a client
+> cannot escalate by sending e.g. `{ "isAdmin": true }`. See
+> [Mass assignment](./orm/getting-started.md#mass-assignment).
 
 ### Validation errors
 

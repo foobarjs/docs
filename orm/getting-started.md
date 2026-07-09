@@ -367,6 +367,60 @@ await product.increment('stock', 5)
 await product.decrement('stock', 3)
 ```
 
+## Mass Assignment
+
+`create()`, `updateOrCreate()`, the `new Model(data)` constructor, and the auto
+[API](../api.md)'s `POST`/`PUT` handlers all assign many attributes at once from
+an untrusted object. To stop a client from setting columns you never intended
+(privilege escalation via `{ "isAdmin": true }`, overwriting `id`, and so on),
+mass assignment is filtered by two static lists:
+
+```js
+class User extends AuthenticableModel {
+  static schema = {
+    name: Field.string(),
+    email: Field.string(),
+    isAdmin: Field.boolean().default(false),
+    roles: Field.json().nullable(),
+  }
+
+  static guarded = ['id', 'isAdmin', 'roles', 'created_at', 'updated_at']
+}
+```
+
+- **`static guarded`** (default `['id', 'created_at', 'updated_at', 'deleted_at']`)
+  is a deny-list: every field is fillable *except* those named. Use `['*']` to
+  guard everything.
+- **`static fillable`** (default `null`) is an allow-list. When set to a
+  non-empty array it takes precedence over `guarded` — only the listed fields
+  are fillable.
+
+Guarded keys (and keys absent from the schema) are silently skipped, not errors:
+
+```js
+// isAdmin is guarded → ignored here
+const user = await User.create({ name: 'Ada', email: 'a@x.com', isAdmin: true })
+user.isAdmin   // → false (the default)
+
+// Direct property assignment is NOT mass assignment — it always works:
+user.isAdmin = true
+await user.save()
+```
+
+### fill() and forceFill()
+
+```js
+const product = new Product()
+product.fill(req.body)        // respects fillable / guarded
+product.forceFill(trusted)    // bypasses the guard (schema fields only)
+
+Product.isFillable('price')   // → true / false
+```
+
+Use `fill()` for anything derived from user input. Reach for `forceFill()` only
+in trusted server-side code that legitimately needs to set a guarded field — for
+example a seeder promoting a user with `forceFill({ isAdmin: true })`.
+
 ## Deleting
 
 ```js

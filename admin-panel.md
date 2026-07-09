@@ -298,6 +298,8 @@ By default only `isAdmin: true` users or users with at least one role can enter 
 
 When a permission is denied, the user is redirected back to the admin dashboard with a flash message.
 
+Custom row and bulk [actions](#inline--bulk-actions) are authorized the same way — see `.can()` there.
+
 ### Builder Components
 
 When using the fluent API, the following components are available:
@@ -478,6 +480,30 @@ export default Admin.resource(Order)
 ```
 
 Inline action handlers receive the record and a context object `{ foobar, Model, c }`. They can return a string to flash as a success message. Bulk action handlers receive the selected ids and the same context object.
+
+#### Authorizing actions
+
+Custom actions are authorized **server-side** before the handler runs — a hidden button is not a security boundary. By default an action requires the resource's `edit` permission (actions mutate data, so `view` is too weak and `delete` too strong). Declare a different requirement with `.can()`:
+
+```js
+Action.make('refund', 'Refund order')
+  .can(['admin', 'finance'])          // an array of allowed roles
+  .handler(async (order, { c }) => { /* ... */ }),
+
+Action.make('publish', 'Publish')
+  .can('create')                      // a CRUD permission name
+  .handler(async (post, { c }) => { /* ... */ }),
+
+Action.make('close', 'Close')
+  .can((user, order) => order.status === 'open')   // a predicate
+  .handler(async (order, { c }) => { /* ... */ }),
+```
+
+`.can()` accepts a CRUD permission name (`'view'`, `'create'`, `'edit'`, `'delete'`), an array of role names, a boolean, or a `fn(user, item)` predicate. `isAdmin: true` users bypass the check. A user who fails is redirected back with a flash message and the handler never runs.
+
+The action's `.visible(fn)` predicate is enforced server-side too: an action hidden from a user cannot be invoked by crafting the request directly.
+
+Built-in bulk actions carry sensible permissions — **Export** requires `view`, **Delete** requires `delete`, **Restore** requires `edit`.
 
 ## Data Export
 
