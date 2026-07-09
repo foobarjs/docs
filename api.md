@@ -20,7 +20,7 @@ options — see [Prefix](#prefix) below.
 
 | Method | URI | Description |
 |--------|-----|-------------|
-| GET | `/api/<tableName>` | List (paginated when `?page=` is provided) |
+| GET | `/api/<tableName>` | List — always returns a paginated `{ data, meta }` envelope |
 | GET | `/api/<tableName>/:id` | Show |
 | POST | `/api/<tableName>` | Create — returns 201 |
 | PUT | `/api/<tableName>/:id` | Update |
@@ -113,30 +113,18 @@ GET /api/products?include=category&filter[published]=true&sort=-price&page=2&per
 | `include` | Comma-separated relation names to eager load |
 | `filter[field]` | Filter by field value |
 | `sort` | Field to sort by. Prefix with `-` for descending |
-| `page` | Page number — triggers paginated response shape |
-| `perPage` | Items per page (default: 15, only used when `page` is set) |
+| `page` | Page number (default: 1) |
+| `perPage` | Items per page (default: 15, max: 100) |
 
 ## Response shapes
 
-### List — without `?page=`
+### List
 
-Returns a bare array of the model (or an array of serializer output if a
-serializer is defined for the model):
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Wireless Headphones",
-    "price": 79.99,
-    "category": 1
-  }
-]
-```
-
-### List — with `?page=`
-
-Returns a `{ data, meta }` envelope:
+Lists are **always paginated** — the endpoint never loads a whole table into
+memory. The response is a `{ data, meta }` envelope; `data` is an array of the
+model (or serializer output when a serializer is defined). Page through with
+`?page=` and `?perPage=`; `perPage` is capped at 100. Both defaults are
+configurable in `config/api.js` (`perPage`, `maxPerPage`).
 
 ```json
 {
@@ -149,12 +137,12 @@ Returns a `{ data, meta }` envelope:
     }
   ],
   "meta": {
-    "currentPage": 2,
+    "currentPage": 1,
     "lastPage": 5,
-    "perPage": 20,
+    "perPage": 15,
     "total": 92,
-    "from": 21,
-    "to": 40
+    "from": 1,
+    "to": 15
   }
 }
 ```
