@@ -193,13 +193,32 @@ Returns HTTP 201 with the created object.
 > cannot escalate by sending e.g. `{ "isAdmin": true }`. See
 > [Mass assignment](./orm/getting-started.md#mass-assignment).
 
-### Validation errors
+### Errors
 
-Validation failures return 422:
+Every API error uses the framework's **canonical envelope** — the same shape the
+central error handler emits everywhere else — and is always JSON (the API marks
+each request so error rendering never depends on the client's `Accept` header).
+Each error response also carries an `X-Request-Id` header matching the body's
+`requestId`, so a client-reported id ties directly to the server log line.
+
+```json
+{ "error": "Unauthenticated", "status": 401, "requestId": "3f2a…-uuid" }
+```
+
+| Status | When |
+|--------|------|
+| 401 | Missing/invalid authentication for a gated resource |
+| 404 | No record with the given id |
+| 422 | Validation failed (adds an `errors` map) |
+| 500 | Unhandled server error (message masked in production) |
+
+Validation failures (422) add the field `errors` map:
 
 ```json
 {
   "error": "Validation failed",
+  "status": 422,
+  "requestId": "3f2a…-uuid",
   "errors": {
     "name": ["The name field is required."],
     "price": ["The price must be a number."]
@@ -207,15 +226,8 @@ Validation failures return 422:
 }
 ```
 
-See [Validation](./validation.md) for how the underlying errors are produced.
-
-### Not found
-
-`GET /api/products/9999` on a missing id returns 404:
-
-```json
-{ "error": "Not found" }
-```
+In debug mode the envelope also includes `exception`, `stack`, and (when present)
+`cause`. See [Validation](./validation.md) for how validation errors are produced.
 
 ## Prefix
 
