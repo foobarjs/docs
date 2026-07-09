@@ -297,10 +297,10 @@ const products = await Product.query()
   .limit(10)
   .get()
 
-// Pagination
-const result = await Product.query().paginate(1, 15)
+// Pagination — call .get() to run the query; returns a { data, meta } envelope
+const result = await Product.query().paginate(1, 15).get()
 // result.data  → array of models
-// result.meta  → { total, page, perPage, lastPage, from, to }
+// result.meta  → { currentPage, lastPage, perPage, total, from, to }
 
 // Chunk — process large result sets in batches
 await Product.chunk(100, (records, page) => {
