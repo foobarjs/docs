@@ -131,6 +131,56 @@ export default function (router, foobar) {
 }
 ```
 
+## Building URLs — the `Uri` helper
+
+`Uri` is a fluent, immutable URL builder — a Laravel-style `Uri` for JavaScript.
+Use it whenever you're constructing a link that preserves or mutates the current
+query string (sortable table headers, filter chips, pagination, tab links):
+
+```js
+import { Uri } from 'foobarjs'
+
+// Build from scratch
+Uri.of('/admin/products').withQuery({ sort: 'name', order: 'asc' }).toString()
+// → "/admin/products?sort=name&order=asc"
+
+// Mutate the current request's URL
+const url = Uri.current(c)
+  .withQuery({ page: 2 })
+  .without('f_reset')
+  .toString()
+```
+
+### API
+
+| Method | Purpose |
+|--------|---------|
+| `Uri.of(input)` | Parse a string, `URL`, or another `Uri`. Relative paths stay relative. |
+| `Uri.current(c)` | Convenience for `Uri.of(c.req.url)`. |
+| `.withQuery({ k: v, ... })` | Merge params. `undefined`, `null`, or `''` **remove** the key. |
+| `.withQueryIf(cond, params)` | Merge only when `cond` is truthy. |
+| `.without('a', 'b')` | Remove one or more keys (varargs or an array). |
+| `.replaceQuery({ ... })` | Clear the entire query, then apply the given params. |
+| `.fragment(value)` | Set or clear the hash. |
+| `.query()` | Return the query as a plain object. |
+| `.searchParams()` | Return a fresh `URLSearchParams` copy (mutations don't leak). |
+| `.path()` | Path portion only. |
+| `.hasQuery(key)` | Is the key present? |
+| `.toString()` / `.toJSON()` | Serialize. |
+
+Every mutation returns a **new** instance — safe to share, safe to chain.
+
+```js
+// Preserve every existing query param, just bump the page:
+Uri.current(c).withQuery({ page: nextPage }).toString()
+
+// Replace one filter, clear another, and reset the page counter:
+Uri.current(c)
+  .withQuery({ 'f[status]': 'open', page: undefined })
+  .without('f_reset')
+  .toString()
+```
+
 ## Next steps
 
 - Write the controllers your routes point at: [Controllers](./controllers.md)
