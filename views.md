@@ -185,14 +185,21 @@ Variables are HTML-escaped. For raw output:
 
 ### CSRF
 
+foobarjs protects against CSRF at the middleware layer using an **origin check**
+(`hono/csrf`): unsafe requests (`POST`/`PUT`/`PATCH`/`DELETE`) must come from an
+allowed origin. Same-origin form submissions are accepted automatically, so
+forms need no per-request token — just submit them normally:
+
 ```html
-<form method="POST">
-  @csrf
-  <input name="email">
+<form method="POST" action="/posts">
+  <input name="title">
+  <button type="submit">Save</button>
 </form>
 ```
 
-`@csrf` renders as `<input type="hidden" name="_csrf" value="...">`.
+> The old `@csrf` directive has been removed. It emitted an inert hidden field
+> whose token was never populated; origin-based protection replaces it. If a
+> template still contains `@csrf` it now renders nothing, so you can delete it.
 
 ## Components
 
