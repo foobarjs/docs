@@ -139,9 +139,27 @@ When debug mode is on and no custom error view exists, the framework renders a r
 - Header with error class, message, status, and request ID.
 - Left sidebar listing every stack frame (app frames highlighted in green, `node_modules` frames dimmed, node internals separated).
 - Source code viewer showing the failing frame with 6 lines of context above and below. Click any frame in the sidebar to view its source.
-- Tabbed request panel with method, URL, path, route params, query, headers, body, session, user, cookies, environment.
+- Tabbed request panel with method, URL, path, route params, query, headers, body, session, user, cookies, environment, and config.
 
 All values are HTML-escaped. Sensitive keys (`password`, `secret`, `token`, `authorization`, `cookie`, `api_key`, ...) are redacted before display.
+
+The debug page distinguishes between two error phases:
+
+- **Runtime errors** show the full page with all context tabs, including Session and User data (populated by middleware).
+- **Boot errors** display a purple "BOOT ERROR" badge instead of the HTTP status code and hide the Session and User tabs, since middleware has not run and that data is unavailable. Request, Headers, Cookies, Environment, and Config tabs remain visible.
+
+## Boot Error Server
+
+When `Foobar.boot()` fails in development (e.g. a config typo, a missing import, or a database connection error), the framework does not simply crash with a terminal stack trace. Instead, it starts a minimal HTTP server that renders the dev error page on every route, so you can inspect the error in the browser.
+
+The boot error server:
+
+- Serves the same Whoops-style debug page described above, with `phase: 'boot'` set so the page shows the "BOOT ERROR" badge and hides Session/User tabs.
+- Sets the `X-Foobar-Boot-Error: 1` response header on every response.
+- Parses cookies and query parameters from the incoming request for display in the debug tabs.
+- Injects the dev-reload script, so saving a file triggers an automatic page refresh once the boot error is fixed.
+
+This behaviour is dev-only. In production, boot failures cause a hard `process.exit(1)` so a broken application is never served to real users.
 
 ## Logging
 

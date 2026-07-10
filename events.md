@@ -41,6 +41,24 @@ static events = ['UserRegistered']
 
 Class references are recommended — they survive renaming and give you IDE support.
 
+### Accessing Config & Environment
+
+Listeners run outside the HTTP request cycle, but the `env()` and `config()` helpers work everywhere:
+
+```js
+import { env, config } from 'foobarjs/core'
+
+export default class SendWelcomeEmail {
+  static events = [UserRegistered]
+
+  async handle(event) {
+    const appName = config('app.name', 'My App')
+    const apiKey = env('SENDGRID_KEY')
+    // ...
+  }
+}
+```
+
 ## Dispatching Events
 
 ```js

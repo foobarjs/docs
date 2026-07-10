@@ -133,6 +133,23 @@ class SendWelcomeEmail extends Job {
 }
 ```
 
+## Accessing Config & Environment
+
+Jobs run outside the HTTP request cycle, but the `env()` and `config()` helpers work everywhere:
+
+```js
+import { Job } from 'foobarjs/queue'
+import { env, config } from 'foobarjs/core'
+
+class SendWelcomeEmail extends Job {
+  async handle(user) {
+    const apiKey = env('SENDGRID_KEY')
+    const fromAddress = config('mail.from', 'noreply@example.com')
+    // ...
+  }
+}
+```
+
 ## Programmatic Failed Job Access
 
 ```js

@@ -125,6 +125,88 @@ class Product extends Model {
 }
 ```
 
+## Zero-Config Defaults
+
+Models without an `Admin.resource()` config file get sensible CRUD defaults automatically:
+
+### Smart list columns
+
+The auto-generated list view picks a compact set of columns (capped at 7):
+
+1. **`id`** — always first
+2. **Title field** — the model's `_title` heuristic (`name`, `title`, `label`, or first string field)
+3. **Up to 4 "interesting" fields**, prioritized by type:
+   - `belongsTo` relations (shows the related model's display label)
+   - Enum fields
+   - Boolean fields
+   - Number/decimal fields
+   - String fields
+   - Date/datetime fields
+4. **`created_at`** — always last (when `static timestamps = true`)
+
+Excluded by default: `updated_at`, `deleted_at`, `text`, `json`, `password`, `file`, `image`, and `belongsToMany` (often noisy as a tag list).
+
+### Auto-generated form fields
+
+Without explicit `form.fields`, the form includes all non-reserved column fields plus `belongsTo` and `belongsToMany` relations. The field list respects mass-assignment declarations:
+
+- **`static fillable`** (allow-list): only those fields appear on the form.
+- **`static guarded`** (deny-list): guarded fields are excluded. The default `guarded` is `['id', 'created_at', 'updated_at', 'deleted_at']`, which already matches the reserved columns.
+- **Explicit `form.fields`** in an admin config always wins.
+
+Relations (`belongsTo`, `belongsToMany`) are always included regardless of `fillable`/`guarded`, since they're set via foreign keys rather than mass assignment.
+
+### Framework-managed fields
+
+`id`, `created_at`, `updated_at`, and `deleted_at` are managed by the framework:
+
+- **Detail page**: displayed as regular read-only fields
+- **Edit form**: shown in the sidebar meta card (right column) as read-only
+- **Create form**: hidden (no values yet)
+- **List page**: `id` and `created_at` are included as columns (see above)
+
+### Default searchable fields
+
+Without explicit `searchable` config, the admin panel auto-selects up to 3 string/text/email fields plus `id` for the search box and global search. This means you can search records by ID out of the box on any model.
+
+### Default filters
+
+Without explicit `filters` config, the admin auto-generates filters for:
+
+- **Enum fields** — rendered as a select dropdown with the enum values
+- **Boolean fields** — rendered as a Yes/No select
+- **`belongsTo` relations** — rendered as a lazy combobox that searches the related model
+
+Up to 6 auto-generated filters are shown. Explicit `filters` in an admin config always wins.
+
+### Default bulk action confirmation
+
+The built-in bulk actions (**Delete**, **Export**, **Restore**) require confirmation before executing. When a user clicks Apply, they are taken to a review page showing the selected records and a confirm/cancel prompt. This uses the same `.confirm()` mechanism available to custom bulk actions:
+
+```js
+Action.bulk('archive', 'Archive selected')
+  .confirm('Archive all selected records?')
+  .handler(async (ids, { Model }) => { /* ... */ })
+```
+
+### Opting out
+
+Hide a model from the admin panel entirely with a static property:
+
+```js
+class InternalLog extends Model {
+  static admin = false
+  // ...
+}
+```
+
+Models with `static admin = false` are excluded from:
+- Sidebar navigation
+- Admin route registration (all CRUD routes return 404)
+- Admin config attachment
+
+The `hidden` option in admin config continues to work for backward compatibility.
+
 ## Custom Admin Configuration
 
 Create files in `app/admin/` to customize admin behavior per model. The file can export either a plain config object or a fluent `Admin.resource()` builder.
@@ -214,7 +296,7 @@ export default Admin.resource(Product)
 | `label` | `string` | Plural label shown in the UI |
 | `singular` | `string` | Singular label shown in the UI |
 | `icon` | `string` | Bootstrap Icons class for the sidebar |
-| `hidden` | `boolean` | Hide this model from the admin panel |
+| `hidden` | `boolean` | Hide this model from the admin panel (prefer `static admin = false` on the Model) |
 | `list.columns` | `array` | Columns to display on the list page |
 | `list.fields` | `array` | Deprecated alias for `list.columns` |
 | `searchable` | `array` | Fields to include in full-text search |
@@ -408,7 +490,7 @@ The package templates use the same Edge directives as the rest of the framework 
 
 ## System Group
 
-Framework-owned models (`FailedJob`, `QueueJob`, `NotificationModel`, `PersonalAccessToken`, `AdminExport`) automatically appear in the sidebar under a **System** group with friendly labels and icons. They are `dashboard: false` by default so they don't clutter the dashboard, and their default permissions block create/edit — you can only view and delete rows.
+Framework-owned models (`FailedJob`, `QueueJob`, `NotificationModel`, `PersonalAccessToken`, `AdminExport`) automatically appear in the sidebar under a **System** group with friendly labels and icons. They are `dashboard: false` by default so they don't clutter the dashboard, and their default permissions block create/edit — you can only view and delete rows. All framework models also set `static api = false` so they are not exposed via the REST API.
 
 Each framework model declares a `static adminDefaults = { ... }` object. `AdminPlugin` merges these defaults with any user-defined resource config so your overrides always win:
 
@@ -503,7 +585,7 @@ Action.make('close', 'Close')
 
 The action's `.visible(fn)` predicate is enforced server-side too: an action hidden from a user cannot be invoked by crafting the request directly.
 
-Built-in bulk actions carry sensible permissions — **Export** requires `view`, **Delete** requires `delete`, **Restore** requires `edit`.
+Built-in bulk actions carry sensible permissions — **Export** requires `view`, **Delete** requires `delete`, **Restore** requires `edit`. All three require confirmation before executing (the user sees a review page with the selected records).
 
 ## Data Export
 
@@ -828,11 +910,12 @@ Available on `ListConfig`:
 
 ```js
 Admin.resource(Product).list(list => list
-  .autoFilters(true)           // auto-generate a filter for every belongsTo relation
   .persistFilters(true)        // remember the user's filter state across page loads (per-table cookie)
   .deferFilters(true)          // in-progress: don't apply filters until the user clicks Apply
 )
 ```
+
+> **Note:** `belongsTo` filters are now auto-generated by default for all models (even without an `Admin.resource()` config). The `.autoFilters()` option is no longer needed.
 
 Filter URL contract is unchanged: `f[key]=value`. Persistence writes to a `foobar_admin_filters_<table>` cookie scoped to `/admin`. Removing a chip navigates to a URL with `f[key]=` (empty) which explicitly clears that filter — both from the URL and from the persisted cookie for that navigation.
 

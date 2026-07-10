@@ -55,6 +55,8 @@ Hono-native access.
 | `this.getLoggedInUser()` | The authenticated user, or `null`. |
 | `this.isLoggedIn()` | Boolean. |
 | `this.validate(FormRequestClass)` | Runs the given `FormRequest`, returns it. |
+| `this.config(key, default)` | Read a config value by dot-notation (e.g. `'app.name'`). |
+| `this.env(key, default)` | Read an environment variable from `process.env`. |
 
 ## Convention-based views
 

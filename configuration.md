@@ -110,9 +110,43 @@ export default {
 
 ## Accessing Configuration
 
-Throughout your application, use the `config.get()` method via the `ConfigLoader`:
+foobarjs provides `env()` and `config()` helpers that work **everywhere** — controllers, jobs, listeners, middleware, or any module:
 
 ```js
-const url = configLoader.get('app.url')
-const dbName = configLoader.get('database.database')
+import { env, config } from 'foobarjs/core'
+
+const port = env('PORT', 3000)             // reads process.env with auto-casting
+const debug = env('APP_DEBUG', false)       // 'true'/'false' → boolean, numeric strings → number
+const secret = env('APP_SECRET')            // raw string or undefined
+
+const appName = config('app.name', 'Foobar')   // reads config/app.js → { name: ... }
+const mailFrom = config('mail.from')            // reads config/mail.js → { from: ... }
+const dbName = config('database.database')      // dot-notation path into any config file
+```
+
+`env()` is available immediately (`.env` is loaded before any CLI command runs). `config()` is available after boot — i.e. in controllers, jobs, listeners, and event handlers. Before boot (e.g. inside config files themselves), use `process.env` directly.
+
+### In controllers
+
+Controllers also have instance-method shortcuts:
+
+```js
+class ProductController extends Controller {
+  async index() {
+    const perPage = this.config('app.perPage', 25)
+    const cdn = this.env('CDN_URL', '/assets')
+    // ...
+  }
+}
+```
+
+### Raw context access
+
+In route handlers or middleware, the `ConfigLoader` is available on the Hono context:
+
+```js
+app.get('/health', (c) => {
+  const appName = c.get('configLoader').get('app.name')
+  return c.json({ app: appName, status: 'ok' })
+})
 ```

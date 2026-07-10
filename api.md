@@ -100,6 +100,24 @@ A request that fails its rule gets HTTP `401`:
 { "error": "Unauthenticated" }
 ```
 
+## Opting out
+
+Hide a model from the API entirely with a static property:
+
+```js
+class InternalLog extends Model {
+  static api = false
+  // ...
+}
+```
+
+Models with `static api = false` are skipped during route registration — all
+REST endpoints for that model return 404.
+
+Framework-internal models (`QueueJob`, `FailedJob`, `NotificationModel`,
+`PersonalAccessToken`, `AdminExport`) default to `static api = false` since
+they are system models not intended for public API access.
+
 ## Query parameters
 
 ### Listing
