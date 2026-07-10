@@ -1,6 +1,6 @@
 # Error Handling
 
-foobarjs ships with a full error-handling pipeline: a central `ErrorHandler` catches every unhandled error, decides whether to render an HTML error page, a JSON response, or a redirect (for validation errors), and logs the incident.
+foobarjs ships with a full error-handling pipeline: a central `ErrorHandler` catches every unhandled error, decides whether to render an HTML error page or a JSON response, and logs the incident.
 
 ## Debug Mode
 
@@ -124,13 +124,32 @@ In debug mode, the response additionally has:
 }
 ```
 
-## Validation Errors — HTML Redirect
+## Validation Errors
 
-For non-JSON requests where an error's `name === 'ValidationError'`, the handler:
+The framework does **not** auto-redirect on validation errors. Your controller
+is responsible for catching `ValidationError` and deciding what to do — redirect
+back for HTML forms, return JSON for APIs, or handle it however you need.
 
-1. Flashes `errors` and `old` (previously-submitted input) into the session.
-2. Redirects to `Referer` (or `/` as a fallback).
-3. Views can read them via the injected `errors` and `old()` globals and the `@error('field')...@enderror` directive.
+```js
+try {
+  const request = await this.validate(StoreProductValidator)
+} catch (err) {
+  if (err.name === 'ValidationError') {
+    if (this.wantsJson()) {
+      return this.json({ errors: err.errors, message: err.message }, 422)
+    }
+    return this.back().withErrors(err).withInput(err.input)
+  }
+  throw err
+}
+```
+
+If a `ValidationError` is not caught, it falls through to the `ErrorHandler`
+which renders a 422 error page (or JSON response) like any other error — useful
+in development for spotting unhandled validation failures.
+
+See [Controllers — Redirect Builder](./controllers.md#redirect-builder) for the
+full `withErrors()` / `withInput()` / `with()` API.
 
 ## The Whoops-style Dev Page
 

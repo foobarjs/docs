@@ -117,19 +117,30 @@ Use it in a controller:
 ```js
 import StoreProductValidator from '../validators/store-product.validator.js'
 
-class ProductsController {
-  async store(c) {
-    const request = await c.validate(StoreProductValidator)
+class ProductsController extends Controller {
+  async store() {
+    let request
+    try {
+      request = await this.validate(StoreProductValidator)
+    } catch (err) {
+      if (err.name === 'ValidationError') {
+        if (this.wantsJson()) {
+          return this.json({ errors: err.errors, message: err.message }, 422)
+        }
+        return this.back().withErrors(err).withInput(err.input)
+      }
+      throw err
+    }
     const product = await Product.create(request.validated())
-    return c.redirect('/products')
+    return this.redirect('/products').with('success', 'Product created!')
   }
 }
 ```
 
-If validation fails:
-
-- **HTML requests**: the user is redirected back with `flash.errors` and `flash.old`. The framework injects `errors` and `old()` view globals so templates can render them.
-- **JSON requests**: a `422` response with `{ error: "Validation failed", errors: {...}, requestId }`
+The framework does **not** auto-redirect on validation errors — your controller
+decides how to respond. Use `this.back().withErrors(err)` for HTML forms and
+`this.json()` for APIs. See [Controllers — Redirect Builder](./controllers.md#redirect-builder)
+for the full builder API.
 
 ## Accessing Errors in Views
 

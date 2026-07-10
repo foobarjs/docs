@@ -38,9 +38,11 @@ Hono-native access.
 | `this.text(body)` / `this.text(body, status)` | Plain text response. |
 | `this.html(body)` | Raw HTML string. |
 | `this.html(template, data)` | Same as `this.render(template, data)`. |
-| `this.redirect(path)` / `this.redirect(path, status)` | HTTP redirect (default 302). |
+| `this.redirect(path)` / `this.redirect(path, status)` | Returns a `RedirectResponse` builder (default 302). |
+| `this.back()` / `this.back(status)` | Redirect to the `Referer` header (or `/`). |
 | `this.view(template, data)` | Alias for `this.render()`. |
 | `this.flash(key, message)` | Set a one-shot session flash. Chainable. |
+| `this.wantsJson()` | `true` when the request accepts JSON (checks `Accept` and `Content-Type`). |
 
 ## Convenience accessors
 
@@ -137,6 +139,47 @@ async show() {
   return this.render('products/show', { product })
 }
 ```
+
+## Redirect Builder
+
+`this.redirect()` and `this.back()` return a `RedirectResponse` builder that
+can flash errors and old input before the redirect is sent:
+
+```js
+import { Controller } from 'foobarjs/core'
+import { ValidationError } from 'foobarjs/orm'
+
+class OrdersController extends Controller {
+  async store() {
+    let request
+    try {
+      request = await this.validate(StoreOrderValidator)
+    } catch (err) {
+      if (err.name === 'ValidationError') {
+        if (this.wantsJson()) {
+          return this.json({ errors: err.errors, message: err.message }, 422)
+        }
+        return this.back().withErrors(err).withInput(err.input)
+      }
+      throw err
+    }
+    const order = await Order.create(request.validated())
+    return this.redirect('/orders').with('success', 'Order placed!')
+  }
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `.withErrors(err)` | Flashes `err.errors` (or `err` itself if it's a plain map) to the session as `errors`. |
+| `.withInput(data)` | Flashes the given data to the session as `old`, so form fields can be repopulated. |
+| `.with(key, value)` | Flash an arbitrary key/value to the session. |
+| `.toResponse()` | Materialise the redirect. Called automatically by the framework — you only need it in tests. |
+
+The framework does **not** auto-redirect on validation errors. Your controller
+decides what to do: redirect back for HTML forms, return JSON for APIs, or
+handle it any other way. This keeps behaviour explicit and predictable,
+especially for custom API endpoints.
 
 ## Next steps
 
