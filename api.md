@@ -49,7 +49,8 @@ export default {
 `Authorization: Bearer <token>` header (see
 [Authentication](./authentication.md)); the API gate just requires one to be
 present. Clients obtain a Bearer token by posting credentials to
-`POST /api/auth/token` (see [API Token Authentication](./authentication.md#api-login-endpoint)).
+`POST /api/auth/token` and inspect the current user with
+`GET /api/auth/me` (see [Authentication](./authentication.md#api-login-endpoint)).
 
 ### Access rules
 

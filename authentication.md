@@ -31,6 +31,7 @@ The plugin registers session middleware, authentication middleware, and the foll
 | POST | `/register` | Create account |
 | POST | `/logout` | Log out |
 | POST | `/api/auth/token` | Exchange credentials for a Bearer token |
+| GET | `/api/auth/me` | Return the authenticated user's profile |
 
 ## User Model
 
@@ -277,6 +278,32 @@ Then add `merchant: 'Merchant'` to `config/auth.js` `tokenAuth.models` and
 clients can authenticate with `{"type": "merchant", "email": "...", "password": "..."}`.
 
 Admin panel login always uses the `User` model — this is not configurable.
+
+### Current User Endpoint
+
+`GET /api/auth/me` returns the authenticated user's profile (excluding hidden
+and password fields). If authenticated via a Bearer token, the response
+includes token metadata:
+
+```bash
+curl http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer 42|a1b2c3d4..."
+```
+
+```json
+{
+  "id": 1,
+  "name": "Jane",
+  "email": "jane@example.com",
+  "isAdmin": true,
+  "_token": {
+    "name": "mobile-app",
+    "abilities": ["*"]
+  }
+}
+```
+
+Returns `401` if unauthenticated. Works with both session and token auth.
 
 ### Admin Token Management
 

@@ -167,6 +167,28 @@ query plan. On SQLite, plans look like
 See [`docs/orm/getting-started.md#indexes`](./orm/getting-started.md#indexes)
 for the model-side index API.
 
+### `foobar user:create`
+
+Create a user account from the command line:
+
+```bash
+foobar user:create --email admin@example.com --password secret123
+foobar user:create --name "Jane" --email jane@example.com --password secret123 --admin
+foobar user:create --email bot@example.com --password secret123 --token "ci-server"
+```
+
+| Option | Description |
+|--------|-------------|
+| `-n, --name <name>` | User display name |
+| `-e, --email <email>` | User email (required) |
+| `-p, --password <password>` | User password (required) |
+| `-a, --admin` | Grant admin access |
+| `-t, --token [name]` | Generate an API token (optional device name, defaults to `"cli"`) |
+
+When `--token` is passed, the plaintext token is printed once — save it, as it
+cannot be retrieved again. This is the recommended way to create service
+accounts: create a user and generate a token in one step.
+
 ## Options
 
 | Option | Description |
