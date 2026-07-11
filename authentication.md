@@ -30,6 +30,7 @@ The plugin registers session middleware, authentication middleware, and the foll
 | GET | `/register` | Registration form |
 | POST | `/register` | Create account |
 | POST | `/logout` | Log out |
+| POST | `/api/auth/token` | Exchange credentials for a Bearer token |
 
 ## User Model
 
@@ -123,22 +124,95 @@ Available middleware:
 
 ## API Token Authentication
 
-For API clients, foobarjs supports Bearer token authentication via the `PersonalAccessToken` model.
+For API clients, foobarjs supports Bearer token authentication via the
+`PersonalAccessToken` model. Tokens are SHA-256 hashed in the database — only
+the plaintext shown at creation is usable.
 
-### Creating Tokens
+### API Login Endpoint
+
+The auth plugin registers `POST /api/auth/token` which exchanges credentials
+for a Bearer token:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jane@example.com", "password": "secret", "deviceName": "mobile-app"}'
+```
+
+Response:
+
+```json
+{
+  "token": "42|a1b2c3d4e5f6...",
+  "type": "Bearer",
+  "name": "mobile-app",
+  "expiresAt": "2026-08-10T00:00:00.000Z"
+}
+```
+
+The `deviceName` field identifies the client (defaults to `"default"`). If a
+token with the same device name already exists for that user, it is revoked
+and replaced — so repeated logins from the same device don't pile up tokens.
+
+### Token Auth Configuration
+
+Configure token behaviour in `config/auth.js`:
+
+```js
+export default {
+  tokenAuth: {
+    models: {
+      user: 'User',          // POST /api/auth/token with type=user (default)
+      merchant: 'Merchant',  // POST /api/auth/token with type=merchant
+    },
+    defaultModel: 'user',
+    maxTokensPerUser: 5,     // oldest tokens pruned when limit is reached
+    expiry: '30d',           // default token lifetime (null = never expires)
+  },
+}
+```
+
+The `type` field in the request body selects which model to authenticate
+against. When omitted, the `defaultModel` is used. All models in the `models`
+map must extend `AuthenticableModel`.
+
+Expiry accepts duration strings: `'30d'`, `'12h'`, `'30m'`, `'3600s'`.
+
+### Creating Tokens Programmatically
+
+Use the convenience methods on any `AuthenticableModel` instance:
+
+```js
+const user = await User.find(1)
+
+// Create a token
+const { plainTextToken, accessToken } = await user.createToken(
+  'mobile-app',            // device name
+  ['read', 'write'],       // abilities (default: ['*'])
+  new Date('2026-12-31')   // expiration (default: null)
+)
+// plainTextToken = "42|a1b2c3d4..." — return this to the client ONCE
+
+// List all tokens for this user
+const tokens = await user.tokens()
+
+// Revoke all tokens
+await user.revokeTokens()
+
+// Revoke only tokens with a specific device name
+await user.revokeTokens('mobile-app')
+```
+
+You can also use the `PersonalAccessToken` model directly:
 
 ```js
 import { PersonalAccessToken } from 'foobarjs/auth'
 
-const user = await User.find(1)
-const { plainTextToken, accessToken } = await PersonalAccessToken.createFor(
-  user,
-  'mobile-app',
-  ['read', 'write'],
-  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // optional expiration
-)
+const { plainTextToken } = await PersonalAccessToken.createFor(user, 'cli', ['*'])
+const token = await PersonalAccessToken.findToken(plainTextToken)
 
-// Return plainTextToken to the client once; it cannot be retrieved again
+// Remove all expired tokens
+await PersonalAccessToken.revokeExpired()
 ```
 
 ### Authenticating API Requests
@@ -146,10 +220,11 @@ const { plainTextToken, accessToken } = await PersonalAccessToken.createFor(
 Send the token in the `Authorization` header:
 
 ```
-Authorization: Bearer 1|abc123...
+Authorization: Bearer 42|a1b2c3d4e5f6...
 ```
 
-The auth middleware automatically resolves the token to a user. The token is hashed in the database (only the plain-text value shown at creation is usable).
+The auth middleware automatically resolves the token to a user. It checks
+session auth first, then falls back to Bearer token.
 
 ### Accessing the Current Token
 
@@ -176,6 +251,45 @@ if (c.currentAccessToken()?.can('write')) {
   // perform write operation
 }
 ```
+
+### Multiple Authenticable Models
+
+Any model that extends `AuthenticableModel` can own tokens. The `tokenableType`
+field on `PersonalAccessToken` stores the model class name, so the auth
+middleware resolves the correct model automatically.
+
+```js
+import { AuthenticableModel } from 'foobarjs/auth'
+import { Field } from 'foobarjs/orm'
+
+export default class Merchant extends AuthenticableModel {
+  static schema = {
+    ...AuthenticableModel.baseSchema,
+    name: Field.string().required(),
+    email: Field.string().required().unique().email(),
+    password: Field.string().required().hidden(),
+    apiKey: Field.string(),
+  }
+}
+```
+
+Then add `merchant: 'Merchant'` to `config/auth.js` `tokenAuth.models` and
+clients can authenticate with `{"type": "merchant", "email": "...", "password": "..."}`.
+
+Admin panel login always uses the `User` model — this is not configurable.
+
+### Admin Token Management
+
+The admin panel shows **API Tokens** under the System group. Admins can:
+
+- **View** all tokens with owner, device name, last used, and expiration
+- **Revoke** individual tokens via an inline action
+- **Bulk revoke** selected tokens
+- **Delete** tokens
+
+Tokens are created via the API login endpoint or programmatically — the admin
+panel is for viewing and revoking, not creating tokens (since the plaintext
+must be returned to the client at creation time).
 
 ## Accessing the Authenticated User
 

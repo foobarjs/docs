@@ -48,7 +48,8 @@ export default {
 `foobarjs/auth` populates the current user from either a session cookie or an
 `Authorization: Bearer <token>` header (see
 [Authentication](./authentication.md)); the API gate just requires one to be
-present.
+present. Clients obtain a Bearer token by posting credentials to
+`POST /api/auth/token` (see [API Token Authentication](./authentication.md#api-login-endpoint)).
 
 ### Access rules
 
