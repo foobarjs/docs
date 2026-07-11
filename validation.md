@@ -186,6 +186,7 @@ const v = new Validator({
 const result = await v.validate({ email: '', password: 'short' })
 // result.valid → false
 // result.errors → { email: [...], password: [...] }
+// result.data  → the input object (useful when valid)
 ```
 
 `Validator` also supports:
