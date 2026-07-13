@@ -13,6 +13,9 @@ The framework ships with sensible defaults for every config key. You only need t
 | `app.debug` | `true` (false in production) | `APP_DEBUG` env |
 | `app.log.level` | `'info'` | `LOG_LEVEL` env |
 | `app.log.file` | `'storage/logs/app.log'` | `LOG_FILE` env; set to empty string to disable |
+| `app.log.maxSize` | `10485760` (10 MB) | Rotate when daily log exceeds this size |
+| `app.log.maxFiles` | `5` | Max rotated files to keep per day |
+| `app.log.maxDays` | `14` | Auto-delete daily logs older than this |
 | `database.connection` | `'sqlite'` | `DB_CONNECTION` env |
 | `database.database` | `'foobar.db'` | `DB_DATABASE` env |
 | `session.driver` | `'cookie'` | `SESSION_DRIVER` env |
@@ -78,6 +81,9 @@ export default {
   log: {
     level: process.env.LOG_LEVEL || 'info',
     file: process.env.LOG_FILE || 'storage/logs/app.log',
+    maxSize: 10 * 1024 * 1024, // 10 MB — rotate when a daily log exceeds this
+    maxFiles: 5,               // rotated files to keep per day (.1, .2, …)
+    maxDays: 14,               // auto-delete daily logs older than this
   },
   plugins: ['foobarjs/auth', 'foobarjs/admin', 'foobarjs/api', 'foobarjs/api-docs'],
 }

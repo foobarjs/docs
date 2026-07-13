@@ -60,7 +60,7 @@ plain-text Markdown.
 ## Import style in code samples
 
 Userland imports use the bare `foobarjs` package name and its subpath
-exports. Never use `@foobarjs/*` (a legacy scheme, removed in 0.1.0).
+exports. Never use `@foobarjs/*` (a legacy scheme, removed in 0.2.0).
 
 Good:
 

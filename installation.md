@@ -9,7 +9,7 @@ foobarjs requires Node.js 20 or higher.
 Install the CLI globally, then scaffold:
 
 ```bash
-npm install -g github:foobarjs/foobarjs#v0.1.0
+npm install -g github:foobarjs/foobarjs#v0.2.0
 foobar new my-app
 cd my-app
 foobar serve
@@ -112,7 +112,7 @@ If you prefer to set up manually, create a project with the following
   "type": "module",
   "private": true,
   "dependencies": {
-    "foobarjs": "github:foobarjs/foobarjs#v0.1.0"
+    "foobarjs": "github:foobarjs/foobarjs#v0.2.0"
   }
 }
 ```
