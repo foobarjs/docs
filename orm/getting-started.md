@@ -236,6 +236,35 @@ class Post extends Model {
 }
 ```
 
+### Date Fields
+
+Date and datetime fields return [dayjs](https://day.js.org/) instances, giving you a fluent API for formatting, comparison, and arithmetic:
+
+```js
+const user = await User.find(1)
+
+user.createdAt.format('YYYY-MM-DD')   // '2026-07-14'
+user.createdAt.fromNow()               // '2 hours ago'
+user.createdAt.add(7, 'day')           // new dayjs instance
+user.createdAt.isBefore(dayjs())       // true/false
+```
+
+Timestamps (`createdAt`, `updatedAt`, `deletedAt`) are also dayjs instances.
+
+When serializing with `toJSON()`, dayjs values are converted to ISO strings automatically. When saving, they are converted back to native `Date` objects for database storage.
+
+The query builder accepts dayjs instances in where clauses:
+
+```js
+import { dayjs } from 'foobarjs/support'
+
+const recent = await Post
+  .where('createdAt', '>', dayjs().subtract(30, 'day'))
+  .get()
+```
+
+See [Helpers: Dates](../helpers.md#dates-dayjs) for the full dayjs API reference.
+
 ### Applying schema changes
 
 Once your models are set up, get their tables into the database:

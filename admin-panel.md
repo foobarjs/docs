@@ -73,6 +73,10 @@ Use query parameters to control the list:
 /admin/products?f[published]=1
 ```
 
+### Date Display
+
+Date and datetime fields display in a human-readable `MMM D, YYYY h:mm A` format (e.g., "Jul 14, 2026 10:30 AM") in both list and detail views. Edit forms use standard HTML `date` and `datetime-local` inputs.
+
 ### Form Fields
 
 Admin automatically renders the appropriate form field type based on your schema:
