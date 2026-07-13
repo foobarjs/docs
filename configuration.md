@@ -1,10 +1,39 @@
 # Configuration
 
-foobarjs uses a layered configuration system: environment variables and config files in `config/`.
+foobarjs uses a layered configuration system: built-in defaults → environment variables → config files in `config/`.
+
+## Built-in Defaults
+
+The framework ships with sensible defaults for every config key. You only need to create config files for values you want to override. A minimal app with no `config/` directory at all will boot with:
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `app.name` | `'Foobar App'` | |
+| `app.port` | `3000` | `PORT` env |
+| `app.debug` | `true` (false in production) | `APP_DEBUG` env |
+| `app.log.level` | `'info'` | `LOG_LEVEL` env |
+| `app.log.file` | `'storage/logs/app.log'` | `LOG_FILE` env; set to empty string to disable |
+| `database.connection` | `'sqlite'` | `DB_CONNECTION` env |
+| `database.database` | `'foobar.db'` | `DB_DATABASE` env |
+| `session.driver` | `'cookie'` | `SESSION_DRIVER` env |
+| `session.lifetime` | `120` (minutes) | |
+| `session.secure` | `true` in production | |
+| `security.rateLimit.max` | `100` | Requests per window |
+| `security.rateLimit.windowMs` | `60000` | 1 minute |
+| `cors.origin` | `APP_URL` or `'http://localhost:3000'` | |
+| `cors.credentials` | `true` | |
+| `queue.default` | `'sync'` | `QUEUE_CONNECTION` env |
+| `cache.default` | `'memory'` | `CACHE_STORE` env |
+| `mail.driver` | `'log'` | `MAIL_DRIVER` env |
+| `mail.from` | `'hello@example.com'` | `MAIL_FROM` env |
+| `storage.default` | `'local'` | |
+| `storage.disks.local.root` | `'public/uploads'` | |
+
+User config files are deep-merged on top of these defaults — any value you set takes precedence.
 
 ## Environment Files
 
-`.env` files are loaded first. Environment-specific overrides can be placed in `.env.{NODE_ENV}` (e.g., `.env.development`, `.env.production`).
+`.env` files are loaded first. Environment-specific overrides can be placed in `.env.{NODE_ENV}` (e.g., `.env.development`, `.env.production`, `.env.test`).
 
 ```env
 APP_URL=http://localhost:3000
@@ -13,9 +42,22 @@ NODE_ENV=development
 DB_CONNECTION=sqlite
 DB_DATABASE=foobar.db
 SESSION_DRIVER=cookie
+LOG_FILE=storage/logs/app.log
 ```
 
-Variables set in `.env` are injected into `process.env` and will not override already-set environment variables.
+Variables set in `.env` are injected into `process.env` and will not override already-set environment variables. Variables in `.env.{NODE_ENV}` **do** override `.env` values.
+
+### Test Environment
+
+The `foobar new` scaffold generates a `.env.test` file that isolates the test database:
+
+```env
+NODE_ENV=test
+DB_DATABASE=test.db
+LOG_FILE=
+```
+
+This ensures `foobar test` uses `test.db` instead of your development database, preventing test data from polluting your dev environment. `LOG_FILE=` disables file logging during tests.
 
 ## Config Files
 
@@ -25,10 +67,18 @@ Config files are JavaScript modules located in the `config/` directory. Each fil
 
 ```js
 export default {
-  name: process.env.APP_NAME || 'Foobar',
+  name: process.env.APP_NAME || 'Foobar App',
   url: process.env.APP_URL || 'http://localhost:3000',
   port: parseInt(process.env.PORT || '3000'),
   env: process.env.NODE_ENV || 'development',
+  debug: process.env.APP_DEBUG === undefined
+    ? process.env.NODE_ENV !== 'production'
+    : (process.env.APP_DEBUG === 'true' || process.env.APP_DEBUG === '1'),
+  secret: process.env.APP_SECRET,
+  log: {
+    level: process.env.LOG_LEVEL || 'info',
+    file: process.env.LOG_FILE || 'storage/logs/app.log',
+  },
   plugins: ['foobarjs/auth', 'foobarjs/admin', 'foobarjs/api', 'foobarjs/api-docs'],
 }
 ```
@@ -49,8 +99,8 @@ export default {
 ```js
 export default {
   driver: process.env.SESSION_DRIVER || 'cookie',
-  lifetime: 60 * 24 * 7,
-  secure: false,
+  lifetime: 120,
+  secure: process.env.NODE_ENV === 'production',
 }
 ```
 
@@ -60,6 +110,15 @@ export default {
 export default {
   origin: process.env.APP_URL || 'http://localhost:3000',
   credentials: true,
+}
+```
+
+### `config/security.js`
+
+```js
+export default {
+  helmet: { contentSecurityPolicy: false },
+  rateLimit: { max: 100, windowMs: 60000 },
 }
 ```
 
@@ -91,10 +150,22 @@ export default {
 
 ```js
 export default {
-  default: 'sync',
+  default: process.env.QUEUE_CONNECTION || 'sync',
   connections: {
     sync: { driver: 'sync' },
-    database: { driver: 'database', table: 'jobs' },
+    database: { driver: 'database', table: 'jobs', queue: 'default' },
+  },
+}
+```
+
+### `config/cache.js`
+
+```js
+export default {
+  default: process.env.CACHE_STORE || 'memory',
+  stores: {
+    memory: { driver: 'memory' },
+    database: { driver: 'database', table: 'cache' },
   },
 }
 ```

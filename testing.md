@@ -133,6 +133,20 @@ test('sends welcome email', async ({ mock }) => {
 })
 ```
 
+## Test Database
+
+By default, `foobar new` generates a `.env.test` file that isolates the test database:
+
+```env
+NODE_ENV=test
+DB_DATABASE=test.db
+LOG_FILE=
+```
+
+Since tests run with `NODE_ENV=test`, the framework automatically loads `.env.test` and overrides `.env` values. This means tests use `test.db` instead of your development `foobar.db`, keeping test data out of your dev environment.
+
+If you don't have a `.env.test`, create one — otherwise tests will share the dev database and pollute it with test data.
+
 ## Test Setup
 
 The default project skeleton includes `test/example.test.js` as a starting point.
