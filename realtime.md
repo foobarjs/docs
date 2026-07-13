@@ -1,6 +1,6 @@
 # Realtime
 
-foobarjs provides WebSocket-based realtime features through the `foobarjs/realtime` package. It integrates with the Hono Node.js server and can use Redis pub/sub for broadcasting across multiple server processes.
+foobarjs provides WebSocket-based realtime features through the `foobarjs/realtime` package. It integrates with the foobarjs server and can use Redis pub/sub for broadcasting across multiple server processes.
 
 ## Setup
 

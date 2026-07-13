@@ -265,7 +265,6 @@ import { Field } from 'foobarjs/orm'
 
 export default class Merchant extends AuthenticableModel {
   static schema = {
-    ...AuthenticableModel.baseSchema,
     name: Field.string().required(),
     email: Field.string().required().unique().email(),
     password: Field.string().required().hidden(),
@@ -320,7 +319,7 @@ must be returned to the client at creation time).
 
 ## Accessing the Authenticated User
 
-The authenticated user is available on the Hono context:
+The authenticated user is available on the request context:
 
 ```js
 const user = c.get('user')      // User model instance or null

@@ -142,7 +142,7 @@ class ProductController extends Controller {
 
 ### Raw context access
 
-In route handlers or middleware, the `ConfigLoader` is available on the Hono context:
+In route handlers or middleware, the `ConfigLoader` is available on the request context:
 
 ```js
 app.get('/health', (c) => {

@@ -1,6 +1,6 @@
 theme: jekyll-theme-slate
 title: foobarjs documentation
-description: Batteries-included Node.js MVC framework inspired by Laravel
+description: Batteries-included Node.js MVC framework
 show_downloads: false
 
 exclude:

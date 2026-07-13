@@ -402,6 +402,14 @@ Column.belongsTo('category')
 Column.belongsToMany('tags')
 ```
 
+**Model-aware columns** — when you use a string column name or `Column.make()`, the column type is auto-resolved from the model field. Enum fields become `badge` columns with auto-generated color mappings, boolean fields become `boolean` columns, and date/datetime fields get proper formatting:
+
+```js
+// These are equivalent when `status` is an enum field on the model:
+Column.make('status')                 // auto-detects badge + generates color map
+Column.badge('status', { ... })       // explicit badge with custom colors
+```
+
 #### Filter
 
 ```js
@@ -415,6 +423,19 @@ Filter.select('status', [
 ])
 ```
 
+**Model-aware filters** — if the model field has `.enum()` values or is a boolean, the filter auto-resolves options without you specifying them:
+
+```js
+// Auto-resolves options from Field.string().enum('draft', 'published', ...)
+Filter.select('status')
+
+// Explicit options still work when you need custom labels or a subset
+Filter.select('status', [{ value: 'active', label: 'Active' }])
+
+// Boolean fields auto-resolve to Yes/No
+Filter.make('published')  // auto-detects boolean, renders as select
+```
+
 #### Field
 
 ```js
@@ -426,6 +447,15 @@ Field.email('contact_email')
 Field.select('status', [{ value: 'draft', label: 'Draft' }])
 Field.belongsTo('category').label('Category')
 Field.belongsToMany('tags').label('Tags')
+```
+
+Additional builder methods for constraints and input attributes:
+
+```js
+Field.number('quantity').min(1).max(100).step(1)
+Field.text('notes').helpText('Internal notes, not shown to customers')
+Field.email('contact').readonly()
+Field.text('code').disabled()
 ```
 
 #### Form Sections
@@ -586,6 +616,40 @@ Action.make('close', 'Close')
 The action's `.visible(fn)` predicate is enforced server-side too: an action hidden from a user cannot be invoked by crafting the request directly.
 
 Built-in bulk actions carry sensible permissions — **Export** requires `view`, **Delete** requires `delete`, **Restore** requires `edit`. All three require confirmation before executing (the user sees a review page with the selected records).
+
+#### Action forms
+
+Actions can collect input from the user before running. Use `.form()` with admin `Field` builders for a unified API:
+
+```js
+import { Action, Field } from 'foobarjs/admin'
+
+Action.make('changePassword', 'Change Password')
+  .confirm('Set a new password for this user.')
+  .form([
+    Field.password('password').required().helpText('Minimum 8 characters'),
+  ])
+  .handler(async (user, { formData }) => {
+    user.password = formData.password
+    await user.save()
+    return 'Password updated.'
+  })
+```
+
+Action form fields are **model-aware** — if a field name matches a model field, the type and options are auto-resolved:
+
+```js
+Action.make('changeStatus', 'Change Status')
+  .form([
+    Field.make('status'),  // auto-resolves to select with enum options from the model
+  ])
+  .handler(async (order, { formData }) => {
+    order.status = formData.status
+    await order.save()
+  })
+```
+
+Plain objects still work for simple cases: `{ name: 'reason', label: 'Reason', type: 'text' }`.
 
 ## Data Export
 
@@ -748,7 +812,7 @@ Widget.value('per-user-orders', async ({ user, foobar, c }) => {
 })
 ```
 
-`user` is the logged-in admin, `c` is the Hono request context (useful for reading query params like `?range=30d`), `foobar` is the app instance. Factory-based widgets (`Widget.count`, `Widget.sum`, ...) can also accept a function that returns a query dynamically per request:
+`user` is the logged-in admin, `c` is the request context (useful for reading query params like `?range=30d`), `foobar` is the app instance. Factory-based widgets (`Widget.count`, `Widget.sum`, ...) can also accept a function that returns a query dynamically per request:
 
 ```js
 Widget.count('current-user-orders', ({ user }) => Order.where('user', user.id))
@@ -877,17 +941,17 @@ Ungrouped models fall into the "Main" group. Framework models are pinned under *
 Stat cards on the dashboard are opt-in per resource:
 
 ```js
-Admin.resource(Product).dashboard(true)
+Admin.resource(Product).dashboard({})
 Admin.resource(Order).dashboard({ icon: 'bi-cart', color: 'primary' })
 ```
 
-Passing `.dashboard(true)` enables a card with defaults derived from the resource label/icon. Passing an options object lets you override `label`, `icon`, `link`, or `color`. Resources without `.dashboard()` are excluded from the dashboard entirely — this keeps the dashboard focused on the metrics that matter, not a list of every table in the database.
+Passing `.dashboard({})` enables a card with defaults derived from the resource label/icon. Passing an options object lets you override `label`, `icon`, `link`, or `color`. Resources without `.dashboard()` are excluded from the dashboard entirely — this keeps the dashboard focused on the metrics that matter, not a list of every table in the database.
 
 If no resources opt in and no widgets are configured, the dashboard shows a friendly empty state explaining how to enable cards or widgets.
 
 Global widgets (not tied to a specific resource) can be defined in `config/admin.js` under `dashboard.widgets`.
 
-## Filters (Filament-style)
+## Filters
 
 Filters live in a **popover** triggered by a "Filters" button in the toolbar. When any filter is active, a chip strip renders directly under the toolbar with one removable pill per active filter.
 

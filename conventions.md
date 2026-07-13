@@ -14,8 +14,9 @@ Guiding principles:
 - **Reasonable defaults, explicit overrides** — every default (table name,
   primary key, view path, admin URL, etc.) can be overridden with a `static`
   property on the class.
-- **Escape hatches** — `foobar.app` is raw Hono, `this.c` is the raw
-  context, `Model.query().getQueryBuilder()` is raw MikroORM. When
+- **Escape hatches** — `foobar.app` exposes the underlying HTTP router,
+  `this.c` is the request context,
+  `Model.query().getQueryBuilder()` gives you the raw query builder. When
   convention doesn't fit, drop down one layer.
 
 ## Directory conventions
@@ -42,7 +43,7 @@ Guiding principles:
 | `routes/api.js` | Same shape as `web.js`. |
 | `config/*.js` | Auto-loaded by filename. Access via `foobar.configLoader.get('<file>.<key>')`. |
 | `database/migrations/*` | Run in filename order by `foobar db migrate`. Tracked in `_foobar_migrations`. See [Database migrations](./database/migrations.md). |
-| `database/seeders/DatabaseSeeder.js` OR `seed.js` at root | Run by `foobar db seed`. |
+| `database/seeders/DatabaseSeeder.js` | Run by `foobar db seed`. Falls back to `seed.js` at root for legacy projects. |
 | `public/**` | Served as static files at `/`. |
 | `.env`, `.env.<NODE_ENV>` | Loaded by `ConfigLoader` before any config file. |
 
@@ -202,7 +203,7 @@ See [API](./api.md) and [Serialization](./serialization.md).
 - `ValidationError` from `foobarjs/orm` always renders as HTTP 422.
 - `Model.save()` auto-validates the schema and translates DB constraint
   violations (unique / not-null / foreign-key / check) into `ValidationError`.
-  Never catch MikroORM constraint exceptions directly — catch
+  Never catch database constraint exceptions directly — catch
   `ValidationError`.
 - `this.validate(FormRequestClass)` (or `c.validate(...)`) runs a
   `FormRequest`, throws `ValidationError` on failure.
@@ -375,7 +376,7 @@ Each of these also appears in the admin panel under the "System" group when
   contains at least one migration file. Explicitly disable regardless with
   `database.autoSync = false` in `config/database.js`.
 - **`foobar db sync`** is a dev-only shortcut that applies the model diff
-  via `MikroORM.schema.update()`. Refuses to run with `NODE_ENV=production`
+  by diffing your models against the database. Refuses to run with `NODE_ENV=production`
   and refuses destructive changes without `--force`.
 
 See [Database migrations](./database/migrations.md).

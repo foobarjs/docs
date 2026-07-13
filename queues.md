@@ -170,7 +170,7 @@ await Queue.flushFailed('default', 'redis')
 | Driver | Description |
 |--------|-------------|
 | `sync` | Runs jobs immediately in the request process. |
-| `database` | Stores queued jobs in `queue_jobs` and failed jobs in `failed_jobs` via MikroORM. |
+| `database` | Stores queued jobs in `queue_jobs` and failed jobs in `failed_jobs` via the ORM. |
 | `redis` | Stores jobs in Redis lists (`queues:<queue>`) for high throughput. |
 
 ## See also

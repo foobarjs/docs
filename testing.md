@@ -27,13 +27,58 @@ Tests run in parallel via Node.js built-in test runner. The `foobarjs/test` help
 
 ## Test Helpers
 
+### Fake Data
+
+The built-in `Fake` utility generates realistic-looking data for tests and seeders — no external dependencies required.
+
+```js
+import { Fake } from 'foobarjs/support'
+
+Fake.name()          // "Alice Johnson"
+Fake.email()         // "bob.garcia42@example.com"
+Fake.phone()         // "(415) 555-1234"
+Fake.sentence()      // "Crisp amber flame gleam haven ivory."
+Fake.paragraph()     // Multiple sentences...
+Fake.number(1, 100)  // 42
+Fake.float(0, 1, 2)  // 0.73
+Fake.boolean()       // true
+Fake.price(10, 50)   // "$34.99"
+Fake.date()          // Date within the past year
+Fake.uuid()          // "550e8400-e29b-41d4-a716-446655440000"
+Fake.slug()          // "crisp-amber-flame"
+Fake.url()           // "https://example.com/delta-haven"
+Fake.pick(['a','b']) // "b"
+Fake.pickMany([1,2,3,4,5], 3)  // [2, 5, 1]
+Fake.city()          // "Portland"
+Fake.country()       // "Canada"
+Fake.company()       // "Globex"
+Fake.address()       // "4521 Johnson Ave"
+Fake.image(400, 300) // "https://placehold.co/400x300"
+```
+
+`Fake` is also re-exported from `foobarjs/test` for convenience.
+
+> For comprehensive fake data generation with locales and advanced types, consider [`@faker-js/faker`](https://fakerjs.dev) (~960KB) or [`chance.js`](https://chancejs.com) (~20KB). Use them directly in your seeders or pass their output to the factory.
+
 ### Model Factory
 
 ```js
-import { factory } from 'foobarjs/test'
+import { factory, Fake } from 'foobarjs/test'
 
-const user = await factory(User, { name: 'John' })
-const users = await factory(User, 5)
+const user = await factory(User, { name: 'John' })  // 1 record with override
+const users = await factory(User, 5)                 // 5 records, auto-generated
+const admins = await factory(User, { role: 'admin' }, 10)  // 10 admins
+```
+
+The factory auto-generates realistic data based on field names — an `email` field gets a fake email, a `name` field gets a fake name, a `slug` gets a fake slug, etc. Override any field by passing explicit values.
+
+For unique values per record, pass a function — it's called once per record with the index:
+
+```js
+await factory(User, {
+  email: (i) => Fake.email(),       // unique email each time
+  role: 'admin',                     // same for all 10
+}, 10)
 ```
 
 ### Request Helper

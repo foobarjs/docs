@@ -1,4 +1,4 @@
-# Eloquent ORM: Relationships
+# ORM: Relationships
 
 Foobar ORM supports four relationship types: BelongsTo, HasMany, HasOne, and BelongsToMany.
 
@@ -103,7 +103,6 @@ Pivot tables include:
 
 ```js
 Field.belongsTo('Category').onDelete('CASCADE')
-Field.hasMany('Product').onDelete('CASCADE')
 ```
 
-Available options: `CASCADE`, `SET NULL` (default), `RESTRICT`, `NO ACTION`.
+`onDelete` applies to `belongsTo` fields (where the foreign key lives). Available options: `CASCADE`, `SET NULL` (default), `RESTRICT`, `NO ACTION`.

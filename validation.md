@@ -62,7 +62,7 @@ If validation fails, a `ValidationError` is thrown with:
 - `status` — Always `422`
 - `message` — `"Validation failed"`
 - `input` — (optional) the raw input that failed
-- `cause` — (optional) the underlying error, e.g. the MikroORM constraint exception
+- `cause` — (optional) the underlying error, e.g. the database constraint exception
 
 ## Database Constraint Translation
 
@@ -77,7 +77,7 @@ If validation fails, a `ValidationError` is thrown with:
 
 The translator uses your model's `.label()` for nicer messages and falls back to a humanised column name.
 
-Because MikroORM's UnitOfWork flushes multiple entities at once, the translator only attributes an error if the message references the current model's table. Unrelated errors are re-thrown so they can be handled by their true owner.
+Because the ORM flushes multiple entities at once, the translator only attributes an error if the message references the current model's table. Unrelated errors are re-thrown so they can be handled by their true owner.
 
 ## Form Request Validation
 

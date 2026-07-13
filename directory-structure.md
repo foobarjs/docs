@@ -1,7 +1,6 @@
 # Directory Structure
 
-foobarjs follows a convention-over-configuration directory structure inspired
-by Laravel.
+foobarjs follows a convention-over-configuration directory layout.
 
 ```
 my-app/
@@ -12,7 +11,7 @@ my-app/
 │   │   ├── layouts/       # Layout templates
 │   │   └── errors/        # 404/403/500/419 overrides
 │   ├── admin/             # Admin panel resource configs
-│   ├── middleware/        # Custom Hono middleware
+│   ├── middleware/        # Custom middleware
 │   ├── validators/        # FormRequest subclasses
 │   ├── serializers/       # API response shapers
 │   ├── jobs/              # Queue jobs
@@ -21,8 +20,9 @@ my-app/
 │   └── notifications/     # Notification classes
 ├── config/                # Config files (one per subsystem)
 ├── database/
+│   ├── foobar.db          # SQLite database (gitignored)
 │   ├── migrations/        # Migration files
-│   └── seeders/           # Seeder classes (or seed.js at root)
+│   └── seeders/           # Seeder classes
 ├── routes/
 │   ├── web.js             # Explicit route registration
 │   └── api.js             # Optional; same shape as web.js
@@ -32,7 +32,6 @@ my-app/
 ├── test/                  # Test files
 ├── .env                   # Environment variables (gitignored)
 ├── .env.example           # Committed template
-├── seed.js                # Optional database seeder (root-level shortcut)
 └── package.json
 ```
 

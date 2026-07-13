@@ -10,23 +10,24 @@ When `foobar serve` runs, the framework goes through this boot sequence:
 4. **Serve Static Files** — `public/` directory served at root
 5. **Discover Models** — Scans `app/models/`, imports each file, collects model classes
 6. **Discover Middleware** — Scans `app/middleware/`
-7. **Initialize Database** — Calls `Db.boot()` with model classes, creating/updating tables
-8. **Create Router** — Initializes the Hono-based router
-9. **Boot Plugins** — Loads plugins from `config/app.js#plugins`, calls `plugin.register(this)`
-10. **Initialize Views** — Sets up the template engine with per-request auto-injection (user, cart count)
-11. **Mount Routes** — Discovers controllers, builds convention routes, mounts on Hono app
-12. **Register 404 Handler** — Sets up the not-found error handler
+7. **Discover Events & Listeners** — Scans `app/events/` and `app/listeners/`
+8. **Create Router** — Initializes the router
+9. **Initialize Views** — Sets up the template engine with per-request auto-injection (user, cart count)
+10. **Boot Plugins** — Loads plugins from `config/app.js#plugins`, calls `plugin.register(this)`
+11. **Initialize Database** — Calls `Db.boot()` with model classes, creating/updating tables
+12. **Mount Routes** — Discovers controllers, builds convention routes, mounts on the app
+13. **Register 404 Handler** — Sets up the not-found error handler
 
 ## Request Lifecycle
 
 Each request flows through:
 
-1. **Hono receives the request**
+1. **The server receives the request**
 2. **Global middleware** — compression, CORS, CSRF, security headers, method override
 3. **Static file check** — if a matching file exists in `public/`, it's served directly
 4. **Plugin middleware** — auth session middleware, etc.
 5. **View middleware** — injects `user`, `loggedIn`, `cartCount` into all rendered views
-6. **Route matching** — Hono matches the request to a controller method
+6. **Route matching** — The router matches the request to a controller method
 7. **Controller execution** — your controller handles the request
 8. **Response** — JSON, rendered HTML, or redirect returned to the client
 

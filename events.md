@@ -94,13 +94,13 @@ on(UserRegistered, SendWelcomeEmail)
 Events can be broadcast to in-memory subscribers:
 
 ```js
-import { Event } from 'foobarjs/events'
+import { subscribe, broadcast } from 'foobarjs/events'
 
-const unsubscribe = Event.subscribe('orders', (event) => {
+const unsubscribe = subscribe('orders', (event) => {
   console.log('Order event:', event)
 })
 
-Event.broadcast('orders', { type: 'new_order', orderId: 123 })
+broadcast('orders', { type: 'new_order', orderId: 123 })
 
 unsubscribe()
 ```

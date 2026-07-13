@@ -186,7 +186,7 @@ Variables are HTML-escaped. For raw output:
 ### CSRF
 
 foobarjs protects against CSRF at the middleware layer using an **origin check**
-(`hono/csrf`): unsafe requests (`POST`/`PUT`/`PATCH`/`DELETE`) must come from an
+(built-in CSRF middleware): unsafe requests (`POST`/`PUT`/`PATCH`/`DELETE`) must come from an
 allowed origin. Same-origin form submissions are accepted automatically, so
 forms need no per-request token — just submit them normally:
 

@@ -53,7 +53,7 @@ foobar new my-blog --yes
 
 **What the skeleton includes:** `package.json`, `.env`, `.gitignore`,
 `config/`, `app/controllers/`, `app/models/`, `app/views/` (layout, home,
-error pages), `routes/web.js`, `public/`, `test/`, `db/`, `database/`.
+error pages), `routes/web.js`, `public/`, `test/`, `database/`.
 
 ### `foobar key:generate`
 
@@ -149,7 +149,7 @@ for the full workflow. Quick sketch:
   `_foobar_migrations` table.
 - `foobar db rollback` undoes the last batch.
 - `foobar db sync` is the local prototyping shortcut — no migration files,
-  just runs `MikroORM.schema.update()`. Refuses to run with
+  diffs your models against the database and applies changes. Refuses to run with
   `NODE_ENV=production` and refuses destructive changes without
   `--force`.
 

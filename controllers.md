@@ -8,7 +8,7 @@ live in `app/controllers/` and are named with the `.controller.js` suffix.
 Every controller extends `Controller` from `foobarjs/core`. The base class
 provides response helpers (`this.render`, `this.json`, `this.redirect`, ...),
 convenience accessors (`this.getLoggedInUser()`, `this.params()`,
-`this.body()`), and the Hono context itself as `this.c`.
+`this.body()`), and the request context as `this.c`.
 
 ```js
 // app/controllers/home.controller.js
@@ -26,7 +26,7 @@ export default HomeController
 Controller methods do not take the context as a parameter — it's already on
 `this.c`. Access request data via `this.params()`, `this.query()`,
 `this.body()`, or drop down to `this.c.req.header('X-Custom')` when you need
-Hono-native access.
+Direct access to the underlying request context.
 
 ## Response helpers
 
@@ -48,7 +48,7 @@ Hono-native access.
 
 | Accessor | What it returns |
 |----------|-----------------|
-| `this.c` | Raw Hono context. Drop down here for anything the helpers don't cover. |
+| `this.c` | Request context. Drop down here for anything the helpers don't cover. |
 | `this.request` | Alias for `this.c.req`. |
 | `this.response` | Alias for `this.c.res`. |
 | `this.params()` | Route parameters (`{ id: '5' }`). |
@@ -129,7 +129,7 @@ or from an explicit registration in `routes/web.js`. See [Routing](./routing.md)
 
 ## Working with the raw context
 
-Any Hono API you need is on `this.c`:
+For anything the helpers don't cover, use `this.c` directly:
 
 ```js
 async show() {

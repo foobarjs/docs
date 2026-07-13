@@ -119,9 +119,9 @@ the other verbs:
 
 The method-override middleware handles this transparently.
 
-## Raw Hono access
+## Raw router access
 
-For anything the router API doesn't cover, drop down to Hono directly:
+For anything the router API doesn't cover, drop down to the underlying router:
 
 ```js
 // Inside a plugin's register(foobar) or from routes/web.js if you accept
@@ -133,7 +133,7 @@ export default function (router, foobar) {
 
 ## Building URLs — the `Uri` helper
 
-`Uri` is a fluent, immutable URL builder — a Laravel-style `Uri` for JavaScript.
+`Uri` is a fluent, immutable URL builder — a fluent, immutable URL builder.
 Use it whenever you're constructing a link that preserves or mutates the current
 query string (sortable table headers, filter chips, pagination, tab links):
 

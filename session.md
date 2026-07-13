@@ -13,7 +13,7 @@ The auth plugin registers session middleware globally. Sessions are stored in HM
 
 ## Using Sessions
 
-Access the session from the Hono context:
+Access the session from the request context:
 
 ```js
 const session = c.get('session')

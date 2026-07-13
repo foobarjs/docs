@@ -1,11 +1,11 @@
 # foobarjs documentation
 
 Documentation for the [foobarjs](https://github.com/foobarjs/foobarjs)
-framework — a batteries-included Node.js MVC framework inspired by Laravel.
+framework — a batteries-included Node.js MVC framework.
 
 ## Philosophy
 
-foobarjs is opinionated the way Laravel is opinionated.
+foobarjs is opinionated so you can focus on building.
 
 - **Batteries included.** ORM, auth, admin panel, auto-generated REST API,
   queues, cache, mail, storage, realtime, notifications, validation, views
@@ -17,12 +17,10 @@ foobarjs is opinionated the way Laravel is opinionated.
   no `dist/` directory. Source is what runs.
 - **One package on npm.** Install `foobarjs`. Sub-paths (`foobarjs/orm`,
   `foobarjs/auth`, ...) are subpath exports of the same package.
-- **Escape hatches everywhere.** `foobar.app` is raw Hono.
-  `Model.query().getQueryBuilder()` is raw MikroORM. `this.c` is raw
-  Hono context. When the framework's opinion doesn't fit, drop down one
-  layer.
-- **Laravel-inspired, not Laravel-clone.** Ergonomics translated to
-  idiomatic ESM Node — not PHP-in-JavaScript.
+- **Escape hatches everywhere.** `foobar.app` exposes the underlying HTTP
+  router. `Model.query().getQueryBuilder()` gives you the raw query
+  builder. `this.c` is the request context. When the framework's opinion
+  doesn't fit, drop down one layer.
 
 ![Define a model — foobarjs auto-generates an admin panel and REST API endpoints](./assets/model-to-admin-api.svg)
 

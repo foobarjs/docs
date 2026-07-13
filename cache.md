@@ -104,5 +104,5 @@ await Cache.store('redis').put('key', 'value', 60)
 |--------|-------------|
 | `memory` | In-process Map. Lost on restart. Good for tests. |
 | `file` | JSON files in `storage/framework/cache`. |
-| `database` | SQL table via MikroORM. |
+| `database` | SQL table via the ORM. |
 | `redis` | Redis strings with TTL. Fast and shared across processes. |

@@ -1,6 +1,6 @@
-# Eloquent ORM: Getting Started
+# ORM: Getting Started
 
-foobarjs includes an Active Record ORM called Foobar ORM, inspired by Laravel Eloquent. It wraps MikroORM internally for database operations.
+foobarjs includes a built-in Active Record ORM. It handles schema definition, querying, relationships, and persistence out of the box.
 
 ## Defining Models
 
@@ -50,7 +50,7 @@ Field.string().maxLength(255)       // Max length
 Field.string().minLength(3)         // Min length
 Field.string().hidden()             // Exclude from JSON
 Field.number().unsigned()           // Unsigned integer
-Field.enum('a', 'b', 'c')           // Enum values
+Field.string().enum('a', 'b', 'c')   // Enum values
 ```
 
 ### Indexes
@@ -76,7 +76,7 @@ class Post extends Model {
 
 #### Auto-index foreign keys
 
-Every `belongsTo` field is automatically indexed. This mirrors Rails/Ecto and prevents the most common source of admin-panel slowness (unindexed FKs cause full-table scans on `WHERE user_id = ?`).
+Every `belongsTo` field is automatically indexed. This prevents the most common source of admin-panel slowness (unindexed FKs cause full-table scans on `WHERE user_id = ?`).
 
 Opt out per-field:
 
@@ -147,7 +147,7 @@ static checks = [
 
 #### Naming convention
 
-Auto-generated names follow this pattern (matches Rails/Ecto):
+Auto-generated names follow this pattern:
 
 | Kind | Format | Example |
 |------|--------|---------|
@@ -253,6 +253,8 @@ files exist.
 
 ## Retrieving Models
 
+Every query method works directly on the Model — no need to call `.query()` first:
+
 ```js
 // Find by primary key
 const product = await Product.find(1)
@@ -263,12 +265,53 @@ const product = await Product.findOrFail(1)
 // All records
 const products = await Product.all()
 
-// Where clause
-const products = await Product.where('published', true).get()
+// First record (no conditions)
+const product = await Product.first()
 
-// First match
+// Where clause — end with .get() for array, .first() for single
+const products = await Product.where('published', true).get()
 const product = await Product.where('slug', 'my-product').first()
 
+// Ordering
+const newest = await Product.latest().get()                    // created_at DESC
+const oldest = await Product.oldest().get()                    // created_at ASC
+const sorted = await Product.orderBy('name').get()             // name ASC
+const sorted = await Product.orderByDesc('price').get()        // price DESC
+
+// Limiting
+const top5 = await Product.orderByDesc('price').limit(5).get()
+
+// Pagination — returns { data, meta } envelope
+const result = await Product.paginate(1, 15).get()
+// result.data  → array of models
+// result.meta  → { currentPage, lastPage, perPage, total, from, to }
+
+// Combine freely
+const result = await Product
+  .where('published', true)
+  .orderBy('name')
+  .paginate(page, 20)
+  .get()
+```
+
+### Quick reference
+
+| Pattern | Returns | When to use |
+|---------|---------|-------------|
+| `Model.find(id)` | model or null | Lookup by primary key |
+| `Model.findOrFail(id)` | model (throws 404) | Lookup that must exist |
+| `Model.all()` | array | Every record |
+| `Model.first()` | model or null | First record |
+| `Model.where(...).get()` | array | Filtered list |
+| `Model.where(...).first()` | model or null | Filtered single |
+| `Model.paginate(page, perPage).get()` | `{ data, meta }` | Paginated results |
+| `Model.count()` / `sum()` / `avg()` | number | Aggregates |
+| `Model.pluck('col')` | array of values | Single column |
+| `Model.exists()` | boolean | Existence check |
+
+**The rule**: methods that return results (`find`, `all`, `first`, `count`, `pluck`, `exists`) are terminal — just `await` them. Methods that shape the query (`where`, `orderBy`, `limit`, `with`, `paginate`) return a builder — keep chaining, then end with `.get()` or `.first()`.
+
+```js
 // Pluck — single column values
 const names = await Product.pluck('name')
 // → ['Product A', 'Product B', ...]
@@ -281,26 +324,19 @@ const map = await Product.pluck('name', 'id')
 const products = await Product.when(showInStock, qb => qb.where('stock', '>', 0)).get()
 const products = await Product.unless(hideUnpublished, qb => qb.where('published', true)).get()
 
+// Where variants
+const active = await Product.whereIn('status', ['active', 'featured']).get()
+const withPrice = await Product.whereNotNull('price').get()
+const mid = await Product.whereBetween('price', [10, 100]).get()
+
 // Filter by relation existence
 const products = await Product.whereHas('category', qb => {
   qb.where('name', 'Electronics')
 }).get()
-const products = await Product.orWhereHas('tags', qb => {
-  qb.where('name', 'sale')
-}).get()
 
-// Query builder
-const products = await Product.query()
-  .where('price', '>', 50)
-  .where('published', true)
-  .orderBy('name', 'asc')
-  .limit(10)
-  .get()
-
-// Pagination — call .get() to run the query; returns a { data, meta } envelope
-const result = await Product.query().paginate(1, 15).get()
-// result.data  → array of models
-// result.meta  → { currentPage, lastPage, perPage, total, from, to }
+// Select specific columns
+const slim = await Product.select(['id', 'name', 'price']).get()
+```
 
 // Chunk — process large result sets in batches
 await Product.chunk(100, (records, page) => {
@@ -596,7 +632,7 @@ console.log(user.password)  // → bcrypt hash
 // double-processing (e.g., hashing an already-hashed password).
 ```
 
-Model values live in `this.$attributes`, keyed by field name (camelCase). The `_entity` object holds the MikroORM persistence layer and should not be accessed directly in custom accessors.
+Model values live in `this.$attributes`, keyed by field name (camelCase). The `_entity` object holds the internal persistence layer and should not be accessed directly in custom accessors.
 
 A custom getter/setter on the prototype replaces the framework-generated one entirely — both reads (`_fromEntity`, `toJSON`, `refresh`) and writes (`save`, `constructor`) go through your implementation.
 
@@ -751,13 +787,13 @@ Everything inside the closure is grouped as a single predicate. Mixing `where` a
 `orderBy` now appends rather than overwriting, so chaining multiple times produces a compound sort:
 
 ```js
-Product.query().orderBy('price', 'asc').orderBy('name', 'desc').get()
+Product.orderBy('price', 'asc').orderBy('name', 'desc').get()
 
-Product.query().orderByDesc('created_at').get()
-Product.query().latest()               // === orderBy('created_at', 'desc')
-Product.query().oldest()               // === orderBy('created_at', 'asc')
+Product.orderByDesc('created_at').get()
+Product.latest()               // === orderBy('created_at', 'desc')
+Product.oldest()               // === orderBy('created_at', 'asc')
 
-Product.query().latest().reorder().orderBy('id', 'asc')  // clear then re-add
+Product.latest().reorder().orderBy('id', 'asc')  // clear then re-add
 ```
 
 ## GroupBy, HAVING, and aggregate SELECT
@@ -887,7 +923,7 @@ await Product.query().where('discontinued', true).deleteAll()
 ### Offset pagination
 
 ```js
-const result = await Product.query().paginate(page, perPage).get()
+const result = await Product.paginate(page, perPage).get()
 // result.data → array of models
 // result.meta.currentPage, lastPage, perPage, total, from, to
 ```
@@ -921,12 +957,12 @@ Product.query().where('name', 'X').dump().get()
 
 ## Escape hatch
 
-Drop down to the underlying MikroORM QueryBuilder when the DSL can't express what you need:
+Drop down to the underlying query builder when the DSL can't express what you need:
 
 ```js
-const mikroQb = Product.query().where('published', true).getQueryBuilder()
-// mikroQb is a MikroORM QueryBuilder with your conditions applied
-const rows = await mikroQb.select(['id', 'name']).execute('all')
+const qb = Product.query().where('published', true).getQueryBuilder()
+// qb is a raw query builder with your conditions applied
+const rows = await qb.select(['id', 'name']).execute('all')
 ```
 
-Anything MikroORM supports — CTEs, joins, sub-queries, `INSERT INTO ... SELECT`, `FOR UPDATE` locks — is available on the returned builder.
+CTEs, joins, sub-queries, `INSERT INTO ... SELECT`, `FOR UPDATE` locks — all available on the returned builder.

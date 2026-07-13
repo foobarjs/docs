@@ -78,9 +78,9 @@ you can manipulate images:
 ```js
 import { Storage } from 'foobarjs/storage'
 
-const thumbnail = await Storage.image('photos/photo.jpg')
+await Storage.image('photos/photo.jpg')
   .resize(200, 200)
-  .toBuffer()
+  .save('photos/thumbnail.jpg')
 ```
 
 ## See also

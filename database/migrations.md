@@ -20,7 +20,7 @@ starts to matter.
 | `foobar db migrate` | Runs pending migrations in filename order. Records each in `_foobar_migrations` with a batch number. |
 | `foobar db rollback [--step N]` | Rolls back the last N batches (default 1). Each batch is undone in reverse order. |
 | `foobar db status` | Lists every migration file and whether it's been applied. |
-| `foobar db sync` | Dev-only shortcut: applies the model diff directly via `MikroORM.schema.update()`. **Refuses to run in production**, and refuses to drop columns/tables without `--force`. |
+| `foobar db sync` | Dev-only shortcut: applies the model diff directly against the database. **Refuses to run in production**, and refuses to drop columns/tables without `--force`. |
 | `foobar db seed` | Runs the seeder(s). |
 | `foobar db reset` | Drops all tables and recreates them from models. Loses data. Not migration-aware — use for hard resets. |
 | `foobar db fresh` | Drop all tables, then run all migrations from scratch (if any exist) or `schema.create()` (if none), then seed. |
@@ -275,7 +275,7 @@ can skip the file workflow entirely:
 foobar db sync
 ```
 
-This runs MikroORM's `schema.update()` against your current models. Fast,
+This diffs your current models against the database schema and applies changes. Fast,
 zero ceremony.
 
 `db sync` has two safety guards:
