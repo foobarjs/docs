@@ -62,10 +62,10 @@ export default {
   // Storefront catalog: anyone can read, only authenticated users can write.
   auth: { read: false, write: 'session' },
 
-  // Per-resource overrides, keyed by table name.
+  // Per-resource overrides, keyed by model name.
   models: {
-    users: 'session',
-    personal_access_tokens: 'session',
+    User: 'session',
+    PersonalAccessToken: 'session',
   },
 }
 ```
@@ -81,7 +81,7 @@ A rule can be:
 
 Resolution precedence (most specific wins):
 
-1. `models[tableName]` in `config/api.js`
+1. `models[ModelName]` in `config/api.js`
 2. `static apiAuth` on the model class
 3. the top-level `auth` option
 
@@ -178,8 +178,8 @@ Returns a bare object:
   "price": 79.99,
   "description": "Bluetooth noise-cancelling headphones",
   "category": 1,
-  "created_at": "...",
-  "updated_at": "..."
+  "createdAt": "...",
+  "updatedAt": "..."
 }
 ```
 

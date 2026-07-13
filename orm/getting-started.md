@@ -226,7 +226,7 @@ export default Category
 
 ### Timestamps & Soft Deletes
 
-Timestamps (`created_at`, `updated_at`) are enabled by default. Soft deletes are opt-in:
+Timestamps (`createdAt`, `updatedAt`) are enabled by default. Soft deletes are opt-in:
 
 ```js
 class Post extends Model {
@@ -273,8 +273,8 @@ const products = await Product.where('published', true).get()
 const product = await Product.where('slug', 'my-product').first()
 
 // Ordering
-const newest = await Product.latest().get()                    // created_at DESC
-const oldest = await Product.oldest().get()                    // created_at ASC
+const newest = await Product.latest().get()                    // createdAt DESC
+const oldest = await Product.oldest().get()                    // createdAt ASC
 const sorted = await Product.orderBy('name').get()             // name ASC
 const sorted = await Product.orderByDesc('price').get()        // price DESC
 
@@ -420,11 +420,11 @@ class User extends AuthenticableModel {
     roles: Field.json().nullable(),
   }
 
-  static guarded = ['id', 'isAdmin', 'roles', 'created_at', 'updated_at']
+  static guarded = ['id', 'isAdmin', 'roles', 'createdAt', 'updatedAt']
 }
 ```
 
-- **`static guarded`** (default `['id', 'created_at', 'updated_at', 'deleted_at']`)
+- **`static guarded`** (default `['id', 'createdAt', 'updatedAt', 'deletedAt']`)
   is a deny-list: every field is fillable *except* those named. Use `['*']` to
   guard everything.
 - **`static fillable`** (default `null`) is an allow-list. When set to a
@@ -747,16 +747,16 @@ Beyond `.where(field, op, value)`, the builder exposes shortcuts for the common 
 ```js
 Product.query().whereIn('id', [1, 2, 3])
 Product.query().whereNotIn('id', [1, 2, 3])
-Product.query().whereNull('deleted_at')
+Product.query().whereNull('deletedAt')
 Product.query().whereNotNull('published_at')
 Product.query().whereBetween('price', [10, 100])
 Product.query().whereNotBetween('price', [10, 100])
 
 // Date helpers (portable across sqlite/mysql/postgres)
-Order.query().whereDate('created_at', '2026-07-08')
-Order.query().whereYear('created_at', 2026)
-Order.query().whereMonth('created_at', 7)
-Order.query().whereDay('created_at', 8)
+Order.query().whereDate('createdAt', '2026-07-08')
+Order.query().whereYear('createdAt', 2026)
+Order.query().whereMonth('createdAt', 7)
+Order.query().whereDay('createdAt', 8)
 
 // Compare two columns
 Product.query().whereColumn('price', '=', 'stock')
@@ -789,9 +789,9 @@ Everything inside the closure is grouped as a single predicate. Mixing `where` a
 ```js
 Product.orderBy('price', 'asc').orderBy('name', 'desc').get()
 
-Product.orderByDesc('created_at').get()
-Product.latest()               // === orderBy('created_at', 'desc')
-Product.oldest()               // === orderBy('created_at', 'asc')
+Product.orderByDesc('createdAt').get()
+Product.latest()               // === orderBy('createdAt', 'desc')
+Product.oldest()               // === orderBy('createdAt', 'asc')
 
 Product.latest().reorder().orderBy('id', 'asc')  // clear then re-add
 ```
@@ -833,15 +833,15 @@ Portable date-truncation grouping helpers:
 ```js
 // Orders per day for the last 30 days
 await Order.query()
-  .whereDate('created_at', '>=', from)
-  .groupByDay('created_at')
+  .whereDate('createdAt', '>=', from)
+  .groupByDay('createdAt')
   .selectCount('*', 'count')
   .get()
 // → [{ bucket: '2026-07-01', count: 12 }, { bucket: '2026-07-02', count: 8 }, ...]
 
 // Revenue per month
 await Order.query()
-  .groupByMonth('created_at')
+  .groupByMonth('createdAt')
   .selectSum('total', 'revenue')
   .get()
 
@@ -866,8 +866,8 @@ await Category.query().withSum('products', 'price').get()
 // Also: withAvg, withMin, withMax
 await Category.query().withAvg('products', 'price').get()
 // → category.products_avg_price
-await Category.query().withMax('products', 'created_at').get()
-// → category.products_max_created_at
+await Category.query().withMax('products', 'createdAt').get()
+// → category.products_max_createdAt
 
 // Existence flag
 await Category.query().withExists('products').get()

@@ -125,7 +125,7 @@ filename.
   which produces `users` from `User`, `order_items` from `OrderItem`,
   and `categorys` from `Category`. **Set `static tableName = 'categories'`
   for words that don't pluralize with a naive `+s`.**
-- `static timestamps = true` (default) → `created_at`, `updated_at` are
+- `static timestamps = true` (default) → `createdAt`, `updatedAt` are
   auto-managed on save.
 - `static softDelete = true` opts in to a `deleted_at` column. Queries
   auto-exclude soft-deleted rows unless `.withTrashed()` is called.

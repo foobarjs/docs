@@ -142,28 +142,28 @@ The auto-generated list view picks a compact set of columns (capped at 7):
    - Number/decimal fields
    - String fields
    - Date/datetime fields
-4. **`created_at`** — always last (when `static timestamps = true`)
+4. **`createdAt`** — always last (when `static timestamps = true`)
 
-Excluded by default: `updated_at`, `deleted_at`, `text`, `json`, `password`, `file`, `image`, and `belongsToMany` (often noisy as a tag list).
+Excluded by default: `updatedAt`, `deletedAt`, `text`, `json`, `password`, `file`, `image`, and `belongsToMany` (often noisy as a tag list).
 
 ### Auto-generated form fields
 
 Without explicit `form.fields`, the form includes all non-reserved column fields plus `belongsTo` and `belongsToMany` relations. The field list respects mass-assignment declarations:
 
 - **`static fillable`** (allow-list): only those fields appear on the form.
-- **`static guarded`** (deny-list): guarded fields are excluded. The default `guarded` is `['id', 'created_at', 'updated_at', 'deleted_at']`, which already matches the reserved columns.
+- **`static guarded`** (deny-list): guarded fields are excluded. The default `guarded` is `['id', 'createdAt', 'updatedAt', 'deletedAt']`, which already matches the reserved columns.
 - **Explicit `form.fields`** in an admin config always wins.
 
 Relations (`belongsTo`, `belongsToMany`) are always included regardless of `fillable`/`guarded`, since they're set via foreign keys rather than mass assignment.
 
 ### Framework-managed fields
 
-`id`, `created_at`, `updated_at`, and `deleted_at` are managed by the framework:
+`id`, `createdAt`, `updatedAt`, and `deletedAt` are managed by the framework:
 
 - **Detail page**: displayed as regular read-only fields
 - **Edit form**: shown in the sidebar meta card (right column) as read-only
 - **Create form**: hidden (no values yet)
-- **List page**: `id` and `created_at` are included as columns (see above)
+- **List page**: `id` and `createdAt` are included as columns (see above)
 
 ### Default searchable fields
 
@@ -768,7 +768,7 @@ Widget.trend('orders-7d', Order, {
   column: null,         // required for sum/avg/etc
   bucket: 'day',        // 'day' | 'week' | 'month' | 'year'
   range: 7,             // last N buckets
-  dateColumn: 'created_at',
+  dateColumn: 'createdAt',
 })
   .label('Orders (last 7 days)')
   .icon('bi-graph-up')
@@ -791,7 +791,7 @@ Widget.chart('revenue-30d', Order, {
   range: 30,
   metric: 'sum',
   column: 'total',
-  dateColumn: 'created_at',
+  dateColumn: 'createdAt',
 })
 ```
 
