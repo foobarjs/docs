@@ -18,7 +18,7 @@ foobar help <command>    # help for a specific command
 
 Commands follow the **colon-namespaced** convention:
 
-- **Simple commands** — standalone verbs: `new`, `serve`, `test`, `routes`
+- **Simple commands** — standalone verbs: `new`, `serve`, `test`, `routes`, `repl`
 - **Namespaced commands** — group related actions: `db:migrate`, `queue:work`, `user:create`
 - **Generator** — `generate` (alias `g`) with a type argument: `foobar g model Product`
 
@@ -78,6 +78,66 @@ List all registered routes:
 foobar routes
 foobar routes --json     # machine-readable output
 ```
+
+### `foobar repl`
+
+Start an interactive console with the booted application:
+
+```bash
+foobar repl
+```
+
+The REPL boots your app (loads config, discovers models, connects to the database) and drops you into a Node.js prompt with the `app` instance available.
+
+**Pretty output** — ORM results are auto-formatted:
+
+```
+foobar> await User.find(1)
+  User #1
+  ──────────────────────
+  name       │ "Alice"
+  email      │ "alice@example.com"
+  isAdmin    │ true
+
+foobar> await Tag.all()
+┌────┬─────────┐
+│ id │ name    │
+├────┼─────────┤
+│  1 │ alpha   │
+│  2 │ beta    │
+└────┴─────────┘
+2 rows
+```
+
+Single models render as key-value cards. Arrays of models render as ASCII tables. Paginated results include meta (page, total, per page). Scalars are color-coded: strings green, numbers yellow, booleans cyan, null/undefined dim.
+
+**Top-level await** works natively:
+
+```
+foobar> const user = await User.find(1)
+foobar> await user.profile
+```
+
+**Importing models** — models are not auto-imported; use dynamic imports:
+
+```
+foobar> const { default: User } = await import('./app/models/user.model.js')
+```
+
+**Dot-commands:**
+
+| Command | Description |
+|---------|-------------|
+| `.models` | List all registered model classes and their table names |
+| `.routes` | List all registered routes |
+| `.reload` | Close the database connection, re-boot the app, and refresh context |
+| `.clear` | Reset the REPL context (built-in) |
+| `.exit` | Exit the REPL (built-in) |
+| `.help` | Show all available commands (built-in) |
+
+**History** — commands persist across sessions in `.foobar/.repl_history`. Press up/down arrows to navigate previous commands.
+
+**Tab completion** — the default Node.js completer provides completion for `app.`, JavaScript globals, and dot-commands.
 
 ### `foobar test`
 
