@@ -17,7 +17,7 @@ export default class Product extends Model {
     price: Field.float().required(),
     stock: Field.number().default(0),
     published: Field.boolean().default(false),
-    category: Field.belongsTo('Category'),
+    category: Field.belongsTo(() => Category),
   }
 }
 ```
@@ -35,22 +35,20 @@ export default class Product extends Model {
 | `Field.date()` | DATE | Date only |
 | `Field.datetime()` | DATETIME | Date and time |
 | `Field.json()` | JSON | JSON object |
-| `Field.belongsTo(Model)` | INTEGER (FK) | Belongs-to relation |
-| `Field.hasMany(Model)` | — | Has-many relation |
-| `Field.hasOne(Model)` | — | Has-one relation |
-| `Field.belongsToMany(Model)` | — | Many-to-many (pivot table) |
+| `Field.belongsTo(() => Model)` | INTEGER (FK) | Belongs-to relation |
+| `Field.hasMany(() => Model)` | — | Has-many relation |
+| `Field.hasOne(() => Model)` | — | Has-one relation |
+| `Field.belongsToMany(() => Model)` | — | Many-to-many (pivot table) |
 
-Relationship fields accept a model class, a string class name, or an arrow function returning the class:
+Relationship fields use an arrow function returning the related model class. This is the standard convention — the arrow function defers evaluation until boot time, which safely handles circular imports between models:
 
 ```js
 import Category from './category.model.js'
 
-Field.belongsTo(Category)       // direct class reference
-Field.belongsTo('Category')     // string class name
-Field.belongsTo(() => Category) // arrow function (for circular imports)
+Field.belongsTo(() => Category)
 ```
 
-Use the arrow function form when two models reference each other — it defers evaluation until boot time, avoiding circular import errors:
+Example with two models that reference each other:
 
 ```js
 // app/models/conference.model.js
@@ -104,7 +102,7 @@ class Post extends Model {
     slug: Field.string().unique(),                       // posts_slug_unique
     email: Field.string().unique('uniq_posts_email'),    // named unique
     publishedAt: Field.datetime().nullable().index(),    // idx_posts_published_at
-    author: Field.belongsTo('User'),                     // auto-indexed FK
+    author: Field.belongsTo(() => User),                   // auto-indexed FK
   }
 }
 ```
@@ -119,7 +117,7 @@ Every `belongsTo` field is automatically indexed. This prevents the most common 
 Opt out per-field:
 
 ```js
-Field.belongsTo(User).noIndex()
+Field.belongsTo(() => User).noIndex()
 ```
 
 Or globally in `config/database.js`:
@@ -139,7 +137,7 @@ For multi-column, partial, or expression indexes, use `static indexes`:
 ```js
 class Order extends Model {
   static schema = {
-    user: Field.belongsTo(User),
+    user: Field.belongsTo(() => User),
     status: Field.string(),
     createdAt: Field.datetime(),
   }

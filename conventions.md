@@ -129,7 +129,7 @@ filename.
   auto-managed on save.
 - `static softDelete = true` opts in to a `deleted_at` column. Queries
   auto-exclude soft-deleted rows unless `.withTrashed()` is called.
-- Foreign keys declared via `Field.belongsTo(X)` get an auto-index by
+- Foreign keys declared via `Field.belongsTo(() => X)` get an auto-index by
   default. Opt out per-field with `.noIndex()` or globally with
   `config.database.autoIndexForeignKeys = false`.
 - `Field.string().hidden()` → excluded from `toJSON()`.
@@ -160,7 +160,7 @@ See [ORM: getting started](./orm/getting-started.md) and
 - Field types map to widgets automatically:
   `Field.string()` → text input, `Field.text()` → textarea,
   `Field.boolean()` → checkbox, `Field.date()` → date picker,
-  `Field.enum(...)` → select, `Field.belongsTo(X)` → related-record combobox.
+  `Field.enum(...)` → select, `Field.belongsTo(() => X)` → related-record combobox.
 - Labels default to a humanized version of the field name:
   `firstName` → "First name".
 - `user.isAdmin === true` bypasses every permission check.

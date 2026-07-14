@@ -7,11 +7,13 @@ Foobar ORM supports four relationship types: BelongsTo, HasMany, HasOne, and Bel
 A child model that belongs to a parent. The foreign key is stored on the child's table.
 
 ```js
+import Category from './category.model.js'
+
 // Product belongs to Category
 export default class Product extends Model {
   static schema = {
     name: Field.string(),
-    category: Field.belongsTo('Category'),
+    category: Field.belongsTo(() => Category),
   }
 }
 ```
@@ -40,11 +42,13 @@ await product.load({ category: ['products'] })
 A parent model that has many children. The foreign key is stored on the child's table.
 
 ```js
+import Product from './product.model.js'
+
 // Category has many Products
 export default class Category extends Model {
   static schema = {
     name: Field.string(),
-    products: Field.hasMany('Product'),
+    products: Field.hasMany(() => Product),
   }
 }
 ```
@@ -60,10 +64,12 @@ const category = await Category.with('products').find(1)
 A parent model that has one child.
 
 ```js
+import Profile from './profile.model.js'
+
 export default class User extends Model {
   static schema = {
     name: Field.string(),
-    profile: Field.hasOne('Profile'),
+    profile: Field.hasOne(() => Profile),
   }
 }
 ```
@@ -73,10 +79,12 @@ export default class User extends Model {
 Many-to-many relationship using a pivot table.
 
 ```js
+import Tag from './tag.model.js'
+
 export default class Post extends Model {
   static schema = {
     title: Field.string(),
-    tags: Field.belongsToMany('Tag'),
+    tags: Field.belongsToMany(() => Tag),
   }
 }
 ```
@@ -102,7 +110,7 @@ Pivot tables include:
 ### On Delete Behavior
 
 ```js
-Field.belongsTo('Category').onDelete('CASCADE')
+Field.belongsTo(() => Category).onDelete('CASCADE')
 ```
 
 `onDelete` applies to `belongsTo` fields (where the foreign key lives). Available options: `CASCADE`, `SET NULL` (default), `RESTRICT`, `NO ACTION`.

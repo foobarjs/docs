@@ -124,7 +124,7 @@ class Product extends Model {
     description: Field.text(),
     price: Field.float().required(),
     published: Field.boolean().default(false),
-    category: Field.belongsTo(Category),
+    category: Field.belongsTo(() => Category),
   }
 }
 ```
