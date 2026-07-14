@@ -42,8 +42,8 @@ Guiding principles:
 | `routes/web.js` | Explicit route registration. Loaded after filename-convention routes. |
 | `routes/api.js` | Same shape as `web.js`. |
 | `config/*.js` | Auto-loaded by filename. Access via `foobar.configLoader.get('<file>.<key>')`. |
-| `database/migrations/*` | Run in filename order by `foobar db migrate`. Tracked in `_foobar_migrations`. See [Database migrations](./database/migrations.md). |
-| `database/seeders/DatabaseSeeder.js` | Run by `foobar db seed`. Falls back to `seed.js` at root for legacy projects. |
+| `database/migrations/*` | Run in filename order by `foobar db:migrate`. Tracked in `_foobar_migrations`. See [Database migrations](./database/migrations.md). |
+| `database/seeders/*.seeder.js` | Run alphabetically by `foobar db:seed`. |
 | `public/**` | Served as static files at `/`. |
 | `.env`, `.env.<NODE_ENV>` | Loaded by `ConfigLoader` before any config file. |
 
@@ -362,20 +362,20 @@ Each of these also appears in the admin panel under the "System" group when
 
 ## Migrations
 
-- **File-based** is the recommended workflow. `foobar db make` writes a
-  migration file with a timestamp prefix; `foobar db migrate` runs
+- **File-based** is the recommended workflow. `foobar db:make` writes a
+  migration file with a timestamp prefix; `foobar db:migrate` runs
   pending files in order and tracks them in `_foobar_migrations`;
-  `foobar db rollback` undoes the last batch.
-- **Auto-diff** generation. `foobar db make` compares your current model
+  `foobar db:rollback` undoes the last batch.
+- **Auto-diff** generation. `foobar db:make` compares your current model
   schemas to `database/.foobar-schema.json` and writes only the delta.
   Destructive changes (column drops, type changes, table drops) are
   commented out for manual review unless you pass `--allow-destructive`.
 - **Blank migrations** for hand-written data changes:
-  `foobar db make --name backfill_country_codes`.
+  `foobar db:make --name backfill_country_codes`.
 - **Auto schema-sync on boot is disabled** whenever `database/migrations/`
   contains at least one migration file. Explicitly disable regardless with
   `database.autoSync = false` in `config/database.js`.
-- **`foobar db sync`** is a dev-only shortcut that applies the model diff
+- **`foobar db:sync`** is a dev-only shortcut that applies the model diff
   by diffing your models against the database. Refuses to run with `NODE_ENV=production`
   and refuses destructive changes without `--force`.
 

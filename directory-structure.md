@@ -52,8 +52,8 @@ Foobarjs walks specific directories at boot and wires things up by convention.
 | `routes/web.js` | Explicit routes, loaded after the filename convention runs. |
 | `routes/api.js` | Same shape as `web.js`. |
 | `config/*.js` | Loaded by `ConfigLoader`. Values accessible via `foobar.configLoader.get('app.name')`. |
-| `database/migrations/` | Run in filename order by `foobar db migrate`. |
-| `database/seeders/` | `foobar db seed` looks for `DatabaseSeeder.js` here, or falls back to `seed.js` at the project root. |
+| `database/migrations/` | Run in filename order by `foobar db:migrate`. |
+| `database/seeders/` | `foobar db:seed` looks for `DatabaseSeeder.js` here, or falls back to `seed.js` at the project root. |
 | `public/` | Served as static files. |
 
 Folders that are **not** auto-discovered — they're conventional locations, but

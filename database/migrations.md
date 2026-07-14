@@ -4,7 +4,7 @@ foobarjs supports **file-based migrations** — versioned, reviewable,
 reversible SQL changes tracked in a `_foobar_migrations` table. This is the
 recommended workflow for anything you'll deploy.
 
-There's also a **schema-sync** shortcut (`foobar db sync`) for local
+There's also a **schema-sync** shortcut (`foobar db:sync`) for local
 prototyping. It reads your model definitions and applies the diff directly,
 no files involved. Use it while sketching; use migrations when the schema
 starts to matter.
@@ -13,17 +13,17 @@ starts to matter.
 
 | Command | What it does |
 |---------|--------------|
-| `foobar db make` | Auto-diff. Compares model schemas to the last-known snapshot and writes a migration file with the delta. Prints `No model changes detected.` if nothing changed. |
-| `foobar db make --name <name>` | Blank migration. Writes a timestamped stub with empty `up` and `down` for you to fill in (data backfills, ad-hoc SQL, edge cases the DSL doesn't cover). |
-| `foobar db make --diff --name <name>` | Auto-diff, but with a specific name instead of the default `auto_diff`. |
-| `foobar db make --diff --allow-destructive` | Auto-diff, allowing operations that would drop columns/tables. Destructive `up` steps are still commented out for you to review; you must uncomment them consciously. |
-| `foobar db migrate` | Runs pending migrations in filename order. Records each in `_foobar_migrations` with a batch number. |
-| `foobar db rollback [--step N]` | Rolls back the last N batches (default 1). Each batch is undone in reverse order. |
-| `foobar db status` | Lists every migration file and whether it's been applied. |
-| `foobar db sync` | Dev-only shortcut: applies the model diff directly against the database. **Refuses to run in production**, and refuses to drop columns/tables without `--force`. |
-| `foobar db seed` | Runs the seeder(s). |
-| `foobar db reset` | Drops all tables and recreates them from models. Loses data. Not migration-aware — use for hard resets. |
-| `foobar db fresh` | Drop all tables, then run all migrations from scratch (if any exist) or `schema.create()` (if none), then seed. |
+| `foobar db:make` | Auto-diff. Compares model schemas to the last-known snapshot and writes a migration file with the delta. Prints `No model changes detected.` if nothing changed. |
+| `foobar db:make --name <name>` | Blank migration. Writes a timestamped stub with empty `up` and `down` for you to fill in (data backfills, ad-hoc SQL, edge cases the DSL doesn't cover). |
+| `foobar db:make --diff --name <name>` | Auto-diff, but with a specific name instead of the default `auto_diff`. |
+| `foobar db:make --diff --allow-destructive` | Auto-diff, allowing operations that would drop columns/tables. Destructive `up` steps are still commented out for you to review; you must uncomment them consciously. |
+| `foobar db:migrate` | Runs pending migrations in filename order. Records each in `_foobar_migrations` with a batch number. |
+| `foobar db:rollback [--step N]` | Rolls back the last N batches (default 1). Each batch is undone in reverse order. |
+| `foobar db:status` | Lists every migration file and whether it's been applied. |
+| `foobar db:sync` | Dev-only shortcut: applies the model diff directly against the database. **Refuses to run in production**, and refuses to drop columns/tables without `--force`. |
+| `foobar db:seed` | Runs the seeder(s). |
+| `foobar db:reset` | Drops all tables and recreates them from models. Loses data. Not migration-aware — use for hard resets. |
+| `foobar db:fresh` | Drop all tables, then run all migrations from scratch (if any exist) or `schema.create()` (if none), then seed. |
 
 ## Anatomy of a migration file
 
@@ -55,8 +55,8 @@ export default {
 }
 ```
 
-`up` is what runs on `foobar db migrate`. `down` is what runs on
-`foobar db rollback`. Always write both.
+`up` is what runs on `foobar db:migrate`. `down` is what runs on
+`foobar db:rollback`. Always write both.
 
 ## Schema builder DSL
 
@@ -146,10 +146,10 @@ doesn't natively support.
 
 ## The auto-diff feature
 
-`foobar db make` compares two snapshots:
+`foobar db:make` compares two snapshots:
 
 - **Previous snapshot** — stored at `database/.foobar-schema.json`, updated
-  automatically after every successful `db migrate` or `db sync`.
+  automatically after every successful `db:migrate` or `db:sync`.
 - **Current snapshot** — derived from your model classes at the moment you
   run `db make`.
 
@@ -170,7 +170,7 @@ class Product extends Model {
 Then:
 
 ```bash
-foobar db make --diff --name add_stock_to_products
+foobar db:make --diff --name add_stock_to_products
 ```
 
 Produces:
@@ -191,15 +191,15 @@ export default {
 }
 ```
 
-Review the file, then `foobar db migrate` applies it.
+Review the file, then `foobar db:migrate` applies it.
 
 ### Destructive changes are refused by default
 
 If your model diff includes column drops, table drops, or column type
-changes, `foobar db make --diff` will refuse:
+changes, `foobar db:make --diff` will refuse:
 
 ```bash
-$ foobar db make --diff
+$ foobar db:make --diff
 Refusing to write a migration because it would drop columns/tables or
 change existing column types.
 Re-run with --allow-destructive to generate the file (destructive up
@@ -215,7 +215,7 @@ await schema.alterTable('products', (t) => {
 })
 ```
 
-You have to un-comment those lines yourself before running `db migrate`.
+You have to un-comment those lines yourself before running `db:migrate`.
 There is no fully-automated path to data loss.
 
 ## Blank migrations for hand-written work
@@ -225,7 +225,7 @@ edits, driver-specific SQL, complex alterations — generate a blank
 migration and fill it in:
 
 ```bash
-foobar db make --name backfill_country_codes
+foobar db:make --name backfill_country_codes
 ```
 
 Produces:
@@ -250,40 +250,40 @@ foobarjs creates `_foobar_migrations` on first run:
 |--------|---------|
 | `id` | Auto-increment. |
 | `name` | Filename of the migration, e.g. `2025_10_15_083012_create_products.js`. Unique. |
-| `batch` | Which `foobar db migrate` invocation applied it. Used for rollback grouping. |
+| `batch` | Which `foobar db:migrate` invocation applied it. Used for rollback grouping. |
 | `ran_at` | ISO 8601 timestamp. |
 
 The table is prefixed with an underscore so it doesn't collide with any
 user model and sorts low in the admin panel. You can inspect it with any
-SQLite client or via `foobar db explain`.
+SQLite client or via `foobar db:explain`.
 
 ## Batches
 
-Every `foobar db migrate` invocation that applies at least one migration
-gets a new batch number (starts at 1). `foobar db rollback` undoes the
+Every `foobar db:migrate` invocation that applies at least one migration
+gets a new batch number (starts at 1). `foobar db:rollback` undoes the
 most recent batch by default. `--step N` rolls back N most recent batches.
 
 If you migrated three files together, they share a batch, so one
-`db rollback` undoes all three (in reverse order).
+`db:rollback` undoes all three (in reverse order).
 
-## The dev shortcut: `foobar db sync`
+## The dev shortcut: `foobar db:sync`
 
 For local prototyping — before you care about migration files at all — you
 can skip the file workflow entirely:
 
 ```bash
-foobar db sync
+foobar db:sync
 ```
 
 This diffs your current models against the database schema and applies changes. Fast,
 zero ceremony.
 
-`db sync` has two safety guards:
+`db:sync` has two safety guards:
 
 - **Destructive-change refusal.** If the diff would drop a column/table or
-  change an existing column's type, `db sync` refuses to run without
+  change an existing column's type, `db:sync` refuses to run without
   `--force`. Same rationale as `db make`.
-- **Production refusal.** If `NODE_ENV=production`, `db sync` refuses to
+- **Production refusal.** If `NODE_ENV=production`, `db:sync` refuses to
   run at all (still with `--force` override, but you shouldn't).
 
 Once you have any migration files in `database/migrations/`, the
@@ -306,13 +306,13 @@ export default {
 
 ## Recommended workflow
 
-1. **Locally, while sketching:** use `foobar db sync` — no ceremony,
+1. **Locally, while sketching:** use `foobar db:sync` — no ceremony,
    change models, restart, keep going.
 2. **When the schema starts to matter** (e.g., a teammate is going to
    check out the branch, or you're about to deploy): run
-   `foobar db make --diff --name <describe_change>` to capture the
+   `foobar db:make --diff --name <describe_change>` to capture the
    history as a migration file.
-3. **In CI/prod deploys:** never `db sync`. Always `foobar db migrate`.
+3. **In CI/prod deploys:** never `db:sync`. Always `foobar db:migrate`.
 
 ## Manual migrations for data changes
 
@@ -321,7 +321,7 @@ Data changes cannot — foobarjs has no idea what `UPDATE users SET ...`
 should be. For those:
 
 ```bash
-foobar db make --name backfill_country_codes
+foobar db:make --name backfill_country_codes
 ```
 
 Fill in the blank migration:
@@ -337,7 +337,7 @@ export default {
 }
 ```
 
-Commit the file. `foobar db migrate` applies it in order alongside your
+Commit the file. `foobar db:migrate` applies it in order alongside your
 structural migrations.
 
 ## See also

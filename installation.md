@@ -80,7 +80,7 @@ Your app is running at <http://localhost:3000>. Here's where to go next:
   `routes/web.js`. See [Controllers](./controllers.md).
 - **Add a model.**
   `foobar generate model Product --fields name:string,price:number,stock:number`
-  creates `app/models/product.model.js`. Run `foobar db fresh` to reset the
+  creates `app/models/product.model.js`. Run `foobar db:fresh` to reset the
   schema. See [ORM: getting started](./orm/getting-started.md).
 - **Explore the auto-admin panel.** Visit `/admin` and log in with the
   credentials you set during `foobar new`. Configure per-model UIs in
@@ -130,7 +130,7 @@ cd demo
 npm install
 cp .env.example .env
 foobar key:generate   # paste value into .env
-foobar db fresh && foobar db seed
+foobar db:fresh && foobar db:seed
 foobar serve
 ```
 

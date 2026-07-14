@@ -4,58 +4,74 @@ Seeders populate your database with initial data for development and testing.
 
 ## Creating a Seeder
 
-Create `database/seeders/DatabaseSeeder.js`. It should export a default async function:
+Generate a seeder:
+
+```bash
+foobar g seeder database
+```
+
+This creates `database/seeders/database.seeder.js`:
 
 ```js
-// database/seeders/DatabaseSeeder.js
+// database/seeders/database.seeder.js
 import User from '../../app/models/user.model.js'
 
-export default async function seed() {
+export default async function () {
   const existing = await User.where('email', 'admin@example.com').first()
   if (!existing) {
-    await User.create({
+    await new User({
       name: 'Admin',
       email: 'admin@example.com',
       password: 'secret',
-    })
+    }).save()
   }
 }
+```
+
+Seeders are `*.seeder.js` files in `database/seeders/`, executed alphabetically. You can create multiple seeders to organize your data:
+
+```
+database/seeders/
+  01-users.seeder.js
+  02-categories.seeder.js
+  03-products.seeder.js
 ```
 
 ## Running Seeders
 
 ```bash
-foobar db seed
+foobar db:seed                         # run all seeders
+foobar db:seed --name 01-users         # run a specific seeder
 ```
 
-This discovers and runs the seed file. The ORM is booted before the seeder runs, so model classes are available.
+The ORM is booted before seeders run, so model classes are available.
 
 ### Via Fresh
 
 ```bash
-foobar db fresh
+foobar db:fresh
 ```
 
-This drops all tables, recreates them, and then runs the seeders.
+This drops all tables, recreates them, and then runs all seeders.
 
 ## Using Factory and Fake
 
 The `factory` function and `Fake` utility make it easy to generate realistic seed data without manually writing every field:
 
 ```js
-// database/seeders/DatabaseSeeder.js
+// database/seeders/database.seeder.js
 import { Fake } from 'foobarjs/support'
 import { factory } from 'foobarjs/test'
 import User from '../../app/models/user.model.js'
 import Product from '../../app/models/product.model.js'
 
-export default async function seed() {
+export default async function () {
   // Create an admin user with explicit data
-  await User.create({
+  await new User({
     name: 'Admin',
     email: 'admin@example.com',
     password: 'secret',
-  })
+  }).save()
 
   // Create 20 users with realistic fake data
   await factory(User, {
@@ -106,4 +122,4 @@ The factory auto-generates data based on field names: an `email` field gets a fa
 - Use `slug` or `email` uniqueness checks to make seeders idempotent
 - Seed essential data (admin users, default categories) with explicit values
 - Use `factory` + `Fake` for bulk test data instead of hand-writing every record
-- Use `foobar db fresh` during development to reset data to a known state
+- Use `foobar db:fresh` during development to reset data to a known state

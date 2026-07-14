@@ -178,19 +178,19 @@ The `foobar` CLI lets you compare declared indexes against what's actually in th
 
 ```bash
 # List all declared indexes with presence status
-foobar db indexes
+foobar db:indexes
 
 # Only show missing indexes; exit 1 if any (great for CI)
-foobar db indexes --missing
+foobar db:indexes --missing
 
 # Show indexes present in DB but not declared
-foobar db indexes --extra
+foobar db:indexes --extra
 
 # Machine-readable
-foobar db indexes --json
+foobar db:indexes --json
 
 # Explain a query to verify the plan
-foobar db explain 'SELECT * FROM orders WHERE user_id = ? AND status = ?' \
+foobar db:explain 'SELECT * FROM orders WHERE user_id = ? AND status = ?' \
   --bind 42 --bind pending
 ```
 
@@ -269,11 +269,11 @@ See [Helpers: Dates](../helpers.md#dates-dayjs) for the full dayjs API reference
 
 Once your models are set up, get their tables into the database:
 
-- **File migrations (recommended):** `foobar db make` scans the diff between
+- **File migrations (recommended):** `foobar db:make` scans the diff between
   your models and the last applied snapshot, writes a migration file, and
-  `foobar db migrate` applies it. See
+  `foobar db:migrate` applies it. See
   [Database migrations](../database/migrations.md).
-- **Dev shortcut:** `foobar db sync` applies the diff directly. Fast for
+- **Dev shortcut:** `foobar db:sync` applies the diff directly. Fast for
   local prototyping, refuses to run in production, refuses destructive
   changes without `--force`.
 
