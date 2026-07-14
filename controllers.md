@@ -60,6 +60,85 @@ Direct access to the underlying request context.
 | `this.config(key, default)` | Read a config value by dot-notation (e.g. `'app.name'`). |
 | `this.env(key, default)` | Read an environment variable from `process.env`. |
 
+## Controller Middleware
+
+Declare middleware on a controller with a static `middleware` property. The middleware runs before every action on that controller — whether the route was registered explicitly or via convention.
+
+### Apply to all actions
+
+```js
+import { Controller } from 'foobarjs/core'
+import { RequireAuthMiddleware } from 'foobarjs/auth'
+
+class DashboardController extends Controller {
+  static middleware = [RequireAuthMiddleware]
+
+  async index() {
+    return this.render('dashboard/index', { user: this.getLoggedInUser() })
+  }
+}
+```
+
+### Apply to specific actions with `only`
+
+```js
+class PostsController extends Controller {
+  static middleware = {
+    use: [RequireAuthMiddleware],
+    only: ['store', 'update', 'destroy'],
+  }
+
+  index() { /* public — no auth */ }
+  show() { /* public — no auth */ }
+  store() { /* auth required */ }
+  update() { /* auth required */ }
+  destroy() { /* auth required */ }
+}
+```
+
+### Exclude specific actions with `except`
+
+```js
+class ArticlesController extends Controller {
+  static middleware = {
+    use: [RequireAuthMiddleware],
+    except: ['index', 'show'],
+  }
+  // Auth runs on store, update, destroy — but not index or show
+}
+```
+
+### Multiple middleware
+
+Stack middleware by adding more classes to the array:
+
+```js
+class AdminReportsController extends Controller {
+  static middleware = [RequireAuthMiddleware, AdminOnlyMiddleware]
+}
+```
+
+Controller middleware stacks with group middleware from `router.group()` — group middleware runs first, then controller middleware.
+
+### Writing a middleware class
+
+Any class with a `handle(c, next)` method works as middleware:
+
+```js
+// app/middleware/admin-only.js
+export default class AdminOnlyMiddleware {
+  async handle(c, next) {
+    const user = c.get('user')
+    if (!user?.isAdmin) {
+      return c.json({ error: 'Forbidden' }, 403)
+    }
+    await next()
+  }
+}
+```
+
+Pass the class itself — foobarjs instantiates it automatically. You can also pass an already-instantiated object if you need constructor arguments.
+
 ## Convention-based views
 
 If a controller action returns data (not a `Response`), foobarjs looks for a

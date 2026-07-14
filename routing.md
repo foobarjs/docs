@@ -50,6 +50,18 @@ router.resource(path, ControllerClass)        // full REST resource
 For each verb, the two-arg form `(path, callback)` and the three-arg form
 `(path, ControllerClass, 'actionName')` both work.
 
+You can also pass middleware classes or instances between the path and handler:
+
+```js
+import { RequireAuthMiddleware } from 'foobarjs/auth'
+
+router.get('/dashboard', RequireAuthMiddleware, (c) => {
+  return c.json({ user: c.get('user') })
+})
+```
+
+Any class with a `handle(c, next)` method works as middleware — pass the class itself (it will be instantiated automatically) or an instance.
+
 ### `router.resource(path, ControllerClass)`
 
 Registers up to seven routes, but only for actions the controller actually
@@ -68,6 +80,60 @@ defines. Missing methods produce no route.
 Also available: `routes/api.js`, loaded the same way. Convention is to use it
 for JSON API routes, e.g. `router.get('/api/v1/status', ...)`, but the file
 just runs — put whatever routes you like in it.
+
+### `router.group(options, callback)`
+
+Group routes that share a prefix, middleware, or both:
+
+```js
+import { RequireAuthMiddleware } from 'foobarjs/auth'
+import DashboardController from '../app/controllers/dashboard.controller.js'
+import SettingsController from '../app/controllers/settings.controller.js'
+
+export default function (router) {
+  // Public routes
+  router.get('/health', (c) => c.json({ status: 'ok' }))
+
+  // Protected routes — RequireAuthMiddleware applies to everything inside
+  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+    router.get('/dashboard', DashboardController, 'index')
+    router.get('/settings', SettingsController, 'index')
+    router.post('/settings', SettingsController, 'update')
+  })
+}
+```
+
+#### Prefix
+
+```js
+router.group({ prefix: '/api/v1' }, (router) => {
+  router.get('/users', UsersController, 'index')    // → GET /api/v1/users
+  router.get('/posts', PostsController, 'index')    // → GET /api/v1/posts
+})
+```
+
+#### Middleware + Prefix
+
+```js
+router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) => {
+  router.resource('orders', OrdersController)       // → /api/orders/*
+})
+```
+
+#### Nesting
+
+Groups can be nested. Prefixes concatenate and middleware stacks:
+
+```js
+router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) => {
+  router.group({ prefix: '/v1', middleware: [RateLimitMiddleware] }, (router) => {
+    router.get('/items', ItemsController, 'index')  // → GET /api/v1/items
+    // Both RequireAuthMiddleware and RateLimitMiddleware run
+  })
+})
+```
+
+Middleware only applies inside the group — routes defined outside are unaffected.
 
 ## Convention routes
 

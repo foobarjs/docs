@@ -102,26 +102,63 @@ const match = Crypto.verifyPassword('user-password', hash)  // true
 
 ## Auth Middleware
 
-Protect routes by applying middleware in your controller's constructor or a base controller:
+Protect routes by importing and applying middleware classes from `foobarjs/auth`:
+
+| Middleware | Description |
+|------------|-------------|
+| `RequireAuthMiddleware` | Redirects to `/login` if not authenticated (returns 401 JSON for API requests) |
+| `GuestMiddleware` | Redirects to `/` if already authenticated |
+
+### On a controller
 
 ```js
 import { Controller } from 'foobarjs/core'
-import { RequireAuthMiddleware, GuestMiddleware } from 'foobarjs/auth'
+import { RequireAuthMiddleware } from 'foobarjs/auth'
 
 export default class DashboardController extends Controller {
-  constructor() {
-    super()
-    RequireAuthMiddleware  // applied globally by the plugin
+  static middleware = [RequireAuthMiddleware]
+
+  async index() {
+    return this.render('dashboard/index', { user: this.getLoggedInUser() })
   }
 }
 ```
 
-Available middleware:
+Use `only` or `except` to apply auth selectively:
 
-| Middleware | Description |
-|------------|-------------|
-| `RequireAuthMiddleware` | Redirects to `/login` if not authenticated |
-| `GuestMiddleware` | Redirects to `/` if already authenticated |
+```js
+class PostsController extends Controller {
+  static middleware = {
+    use: [RequireAuthMiddleware],
+    except: ['index', 'show'],
+  }
+}
+```
+
+### On routes
+
+```js
+// routes/web.js
+import { RequireAuthMiddleware, GuestMiddleware } from 'foobarjs/auth'
+
+export default function (router) {
+  // Single route
+  router.get('/dashboard', RequireAuthMiddleware, DashboardController, 'index')
+
+  // Group of routes
+  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+    router.get('/settings', SettingsController, 'index')
+    router.post('/settings', SettingsController, 'update')
+  })
+
+  // Guest-only routes (redirect away if already logged in)
+  router.group({ middleware: [GuestMiddleware] }, (router) => {
+    router.get('/welcome', (c) => c.html('Welcome! Please sign up.'))
+  })
+}
+```
+
+See [Controllers](./controllers.md) and [Routing](./routing.md) for the full middleware API.
 
 ## API Token Authentication
 
