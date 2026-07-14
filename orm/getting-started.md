@@ -35,6 +35,44 @@ export default class Product extends Model {
 | `Field.date()` | DATE | Date only |
 | `Field.datetime()` | DATETIME | Date and time |
 | `Field.json()` | JSON | JSON object |
+| `Field.belongsTo(Model)` | INTEGER (FK) | Belongs-to relation |
+| `Field.hasMany(Model)` | — | Has-many relation |
+| `Field.hasOne(Model)` | — | Has-one relation |
+| `Field.belongsToMany(Model)` | — | Many-to-many (pivot table) |
+
+Relationship fields accept a model class, a string class name, or an arrow function returning the class:
+
+```js
+import Category from './category.model.js'
+
+Field.belongsTo(Category)       // direct class reference
+Field.belongsTo('Category')     // string class name
+Field.belongsTo(() => Category) // arrow function (for circular imports)
+```
+
+Use the arrow function form when two models reference each other — it defers evaluation until boot time, avoiding circular import errors:
+
+```js
+// app/models/conference.model.js
+import Attendee from './attendee.model.js'
+
+class Conference extends Model {
+  static schema = {
+    title: Field.string().required(),
+    attendees: Field.hasMany(() => Attendee),
+  }
+}
+
+// app/models/attendee.model.js
+import Conference from './conference.model.js'
+
+class Attendee extends Model {
+  static schema = {
+    name: Field.string().required(),
+    conference: Field.belongsTo(() => Conference),
+  }
+}
+```
 
 ### Field Constraints
 
