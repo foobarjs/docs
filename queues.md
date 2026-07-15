@@ -92,20 +92,23 @@ With the `sync` driver, the job runs immediately and `dispatch` returns the resu
 ## Running the Worker
 
 ```bash
-# Process jobs continuously
+# Process jobs continuously (all discovered queues)
 foobar queue:work
 
 # Process one job and exit
 foobar queue:work --once
 
-# Custom queue/connection
-foobar queue:work --queue=emails --connection=database
+# Specific queue(s) — comma-separated
+foobar queue:work --queue=emails
+foobar queue:work --queue=default,emails,exports
 
-# Tune retries and sleep
-foobar queue:work --tries=3 --sleep=3 --timeout=60
+# Custom connection, retries, sleep
+foobar queue:work --connection=database --tries=3 --sleep=3 --timeout=60
 ```
 
-The worker discovers job classes from `app/jobs/` automatically.
+By default the worker processes **all** queues discovered from your job classes (each job's `static queue` property) plus the `default` queue. Pass `--queue` to restrict to specific queues.
+
+The worker discovers job classes from `app/jobs/` automatically, plus any framework-internal jobs (e.g. admin exports).
 
 ## Retrying Failed Jobs
 

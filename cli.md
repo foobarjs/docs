@@ -335,7 +335,7 @@ foobar queue:work --once       # process one job and exit
 
 | Option | Description |
 |--------|-------------|
-| `-q, --queue <name>` | Queue name (default: `default`) |
+| `-q, --queue <name>` | Queue name(s), comma-separated (default: all discovered) |
 | `-c, --connection <name>` | Queue connection |
 | `-s, --sleep <seconds>` | Seconds to sleep when no jobs (default: `3`) |
 | `-t, --tries <n>` | Number of retries (default: `3`) |
