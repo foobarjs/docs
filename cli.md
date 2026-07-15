@@ -353,6 +353,38 @@ foobar queue:retry --queue emails
 
 ---
 
+## Schedule
+
+### `foobar schedule:work`
+
+Run the schedule worker as a long-running process (recommended for pm2, systemd, Docker):
+
+```bash
+foobar schedule:work
+```
+
+Checks for due tasks every minute. No OS cron entry needed.
+
+### `foobar schedule:run`
+
+Run all due scheduled tasks once and exit (for OS cron):
+
+```bash
+foobar schedule:run
+```
+
+### `foobar schedule:list`
+
+List all registered scheduled tasks:
+
+```bash
+foobar schedule:list
+```
+
+See [Queues — Task Scheduling](./queues.md#task-scheduling) for how to define your schedule in `config/schedule.js`.
+
+---
+
 ## Custom Commands
 
 You can add your own CLI commands by creating files in `app/commands/`. Each command is a `*.command.js` file that exports a definition object.

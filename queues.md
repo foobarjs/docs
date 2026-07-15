@@ -173,6 +173,142 @@ await Queue.flushFailed('default', 'redis')
 | `database` | Stores queued jobs in `queue_jobs` and failed jobs in `failed_jobs` via the ORM. |
 | `redis` | Stores jobs in Redis lists (`queues:<queue>`) for high throughput. |
 
+---
+
+## Task Scheduling
+
+The scheduler lets you define recurring tasks in code instead of managing individual cron entries. Define your schedule in `config/schedule.js`, then run a single worker.
+
+### Defining the Schedule
+
+Create `config/schedule.js`:
+
+```js
+import CleanupJob from '../app/jobs/cleanup.job.js'
+import ReportJob from '../app/jobs/report.job.js'
+
+export default function (scheduler) {
+  // Dispatch a job on a schedule
+  scheduler.job(CleanupJob).daily().name('nightly-cleanup')
+
+  // Run a job with arguments
+  scheduler.job(ReportJob, { type: 'weekly' }).weeklyOn(1, '9:00').name('weekly-report')
+
+  // Run an inline closure
+  scheduler
+    .call(async () => {
+      console.log('Health check at', new Date().toISOString())
+    })
+    .everyFiveMinutes()
+    .name('health-check')
+}
+```
+
+### Running the Scheduler
+
+**Long-running worker** (recommended for pm2, systemd, Docker):
+
+```bash
+foobar schedule:work
+```
+
+The worker stays alive and checks for due tasks every minute — no cron entry needed. Run it under a process manager:
+
+```bash
+# pm2
+pm2 start "npx foobar schedule:work" --name scheduler
+
+# systemd, Docker, etc.
+foobar schedule:work
+```
+
+**One-shot** (for OS cron):
+
+```bash
+foobar schedule:run
+```
+
+Add a single cron entry to invoke it every minute:
+
+```
+* * * * * cd /path/to/app && npx foobar schedule:run >> /dev/null 2>&1
+```
+
+**List registered tasks:**
+
+```bash
+foobar schedule:list
+```
+
+### Schedule Frequency Options
+
+| Method | Cron Equivalent |
+|--------|-----------------|
+| `everyMinute()` | `* * * * *` |
+| `everyTwoMinutes()` | `*/2 * * * *` |
+| `everyFiveMinutes()` | `*/5 * * * *` |
+| `everyTenMinutes()` | `*/10 * * * *` |
+| `everyFifteenMinutes()` | `*/15 * * * *` |
+| `everyThirtyMinutes()` | `*/30 * * * *` |
+| `hourly()` | `0 * * * *` |
+| `hourlyAt(15)` | `15 * * * *` |
+| `daily()` | `0 0 * * *` |
+| `dailyAt('13:30')` | `30 13 * * *` |
+| `weekly()` | `0 0 * * 0` |
+| `weeklyOn(1, '8:00')` | `0 8 * * 1` |
+| `monthly()` | `0 0 1 * *` |
+| `monthlyOn(15, '9:00')` | `0 9 15 * *` |
+
+### Day Constraints
+
+Chain a day constraint after any frequency:
+
+```js
+scheduler.job(SyncJob).hourly().weekdays()    // Mon–Fri only
+scheduler.call(fn).daily().mondays()          // Mondays only
+```
+
+Available: `weekdays()`, `sundays()`, `mondays()`, `tuesdays()`, `wednesdays()`, `thursdays()`, `fridays()`, `saturdays()`.
+
+### Preventing Overlap
+
+By default, a task will not run if its previous invocation is still running:
+
+```js
+scheduler.call(longRunningFn).everyMinute().withoutOverlapping()
+```
+
+To allow concurrent runs (e.g. if each invocation is independent):
+
+```js
+scheduler.call(fn).everyMinute().allowOverlapping()
+```
+
+### Task Types
+
+| Method | Description |
+|--------|-------------|
+| `scheduler.job(JobClass, ...args)` | Dispatch a queued job via `JobClass.dispatch()` |
+| `scheduler.call(fn)` | Run an inline async function directly |
+| `scheduler.command(name, runner)` | Run a CLI command |
+
+### Production Setup
+
+Run both `queue:work` and `schedule:work` under your process manager:
+
+```bash
+# pm2 ecosystem.config.js
+module.exports = {
+  apps: [
+    { name: 'web',       script: 'npx foobar serve' },
+    { name: 'worker',    script: 'npx foobar queue:work' },
+    { name: 'scheduler', script: 'npx foobar schedule:work' },
+  ],
+}
+```
+
+The scheduler dispatches jobs to the queue; the worker processes them. This keeps scheduled work non-blocking and retryable.
+
 ## See also
 
 - [Conventions](./conventions.md#queues)
