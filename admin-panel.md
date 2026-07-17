@@ -655,6 +655,88 @@ Action.make('changeStatus', 'Change Status')
 
 Plain objects still work for simple cases: `{ name: 'reason', label: 'Reason', type: 'text' }`.
 
+#### Queued bulk actions
+
+Bulk actions that are slow or touch external services can be dispatched to the background queue instead of running inline. Add `.queued()` to a named action:
+
+```js
+import { Admin, Action } from 'foobarjs/admin'
+import Order from '../models/order.model.js'
+
+export default Admin.resource(Order)
+  .list(list => list
+    .bulkActions([
+      Action.make('sync-warehouse', 'Sync to Warehouse')
+        .icon('bi-cloud-upload')
+        .confirm('Sync selected orders to the warehouse?')
+        .queued()
+        .handler(async (items, { foobar, Model }) => {
+          for (const order of items) {
+            await warehouseApi.sync(order)
+          }
+          return `Synced ${items.length} orders.`
+        }),
+    ])
+  )
+```
+
+How it works:
+
+- When **foobarjs/queue** is installed, the action is dispatched as a `BulkActionJob`. The user sees a flash message ("has been queued") and is redirected back immediately.
+- Without a queue, the action runs inline as usual (synchronously in the request).
+- The handler receives hydrated model instances (not raw IDs). When "select all" is used, the job rebuilds the query from the stored filter state instead of serializing thousands of IDs.
+- Items are loaded in chunks of 500 to keep memory usage constant regardless of result set size.
+- If **foobarjs/notifications** is installed, the user receives a notification when the job completes.
+
+Queued actions **must have a name** (the first argument to `Action.make()`). The name is used as a registry key so the job can resolve the handler function at execution time — anonymous queued actions fall back to inline execution with a warning.
+
+| Method | Description |
+|--------|-------------|
+| `.queued()` | Dispatch via background job when a queue is available |
+| `.handler(fn)` | `fn(items, { foobar, Model })` — receives hydrated model instances |
+| `.confirm(msg?)` | Show confirmation page before dispatching |
+
+## CRUD Hooks
+
+Hook into the admin panel's create, update, and delete lifecycle with `beforeStore`, `afterStore`, `beforeUpdate`, `afterUpdate`, `beforeDestroy`, and `afterDestroy`:
+
+```js
+import { Admin } from 'foobarjs/admin'
+import Order from '../models/order.model.js'
+
+export default Admin.resource(Order)
+  .beforeStore(async ({ data, Model, c, foobar }) => {
+    if (!data.status) data.status = 'pending'
+  })
+  .afterStore(async ({ item, data, Model, c, foobar }) => {
+    await notifySlack(`New order #${item.id} created`)
+  })
+  .beforeUpdate(async ({ data, item, Model, c, foobar }) => {
+    // `item` is the existing record, `data` is the incoming values
+  })
+  .afterUpdate(async ({ item, data, Model, c, foobar }) => {
+    // `item` has already been saved at this point
+  })
+  .beforeDestroy(async ({ item, Model, c, foobar }) => {
+    await archiveRecord(item)
+  })
+  .afterDestroy(async ({ item, Model, c, foobar }) => {
+    await notifySlack(`Order #${item.id} deleted`)
+  })
+```
+
+Each hook receives a context object:
+
+| Property | Available in | Description |
+|----------|-------------|-------------|
+| `data` | before/afterStore, before/afterUpdate | The form data being saved |
+| `item` | afterStore, before/afterUpdate, before/afterDestroy | The model instance |
+| `Model` | All hooks | The model class |
+| `c` | All hooks | The Hono request context |
+| `foobar` | All hooks | The app instance |
+
+Hooks are **augmenting** — they run around the existing CRUD logic, not replacing it. Errors thrown in hooks propagate to the standard error handler. `beforeStore` can modify `data` before the record is created. `beforeUpdate` can modify `data` or `item` before saving.
+
 ## Data Export
 
 Every list view exposes a first-class **Export selected** bulk action that renders the currently-selected rows (or, when no rows are selected, the currently-filtered query) as CSV.
@@ -679,14 +761,52 @@ export default {
 }
 ```
 
-Per-resource overrides:
+Per-resource overrides with `ExportAction`:
 
 ```js
-Admin.resource(Product)
-  .list(list => list.bulkActions([
-    // Custom export action with a filename override.
-  ]))
+import { Admin, ExportAction } from 'foobarjs/admin'
+import Order from '../models/order.model.js'
+
+Admin.resource(Order)
+  .list(list => list
+    .bulkActions([
+      ExportAction.make('export-orders', 'Export Orders')
+        .filename('orders-export')
+        .columns(['id', 'status', 'total', 'shippingAddress', 'paidAt'])
+        .delimiter(';')
+        .dateFormat('YYYY-MM-DD HH:mm')
+        .confirm('Export all selected orders?'),
+    ])
+  )
 ```
+
+`ExportAction` extends `Action` with export-specific fluent methods:
+
+| Method | Description |
+|--------|-------------|
+| `make(name?, label?)` | Factory. Optional `name` identifies the action for queued exports (default `'export'`). Optional `label` sets the button text (default `'Export'`). |
+| `label(string)` | Override the button label after construction. |
+| `filename(string \| fn)` | Custom filename (without `.csv`). Accepts a string or a `(query) => string` function. |
+| `columns(array \| object)` | Columns to export. Array of field names (or mixed with computed columns), or an object where keys are headers and values are field names or formatter functions. |
+| `delimiter(string)` | CSV delimiter (default `,`). Use `';'` for European locales. |
+| `dateFormat(string)` | Date format string (e.g. `'YYYY-MM-DD'`). Uses dayjs format tokens. Default is ISO 8601. |
+
+**Computed columns** — add derived values to exports using formatter functions. Mix regular field names with `{ label: formatterFn }` objects:
+
+```js
+ExportAction.make('export-orders', 'Export Orders')
+  .columns([
+    'id', 'status', 'total',
+    { 'QR Code': (record) => `https://qr.example.com/${record.id}` },
+    { 'Full Name': (record) => `${record.firstName} ${record.lastName}` },
+  ])
+```
+
+Computed columns appear in the column selector on the confirm page. When a named `ExportAction` is used, the framework registers it at boot so queued exports can resolve the formatter functions at execution time.
+
+The object form also supports renaming: `{ 'Order #': 'id', 'Amount': (val, record) => `$${val}` }`.
+
+Without an `ExportAction`, the built-in export uses the model's table name as filename, all list columns, comma delimiter, and ISO dates.
 
 When **foobarjs/notifications** is registered, completing exports create a database notification for the initiating user with a `downloadUrl`.
 
@@ -873,12 +993,106 @@ Widget.sum('total-revenue', Order, 'total')
 
 Each produces a single `SELECT COUNT(*)` / `SELECT SUM(total)` at the database, avoiding transfer and computation for tens of thousands of rows.
 
+## Custom Data Sources (CustomModel)
+
+Use `CustomModel` to add non-database data sources to the admin panel. Instead of querying the ORM, a `CustomModel` routes all CRUD operations through static methods you implement: `$list`, `$find`, `$create`, `$update`, and `$delete`.
+
+```js
+// app/models/system-log.model.js
+import { CustomModel, Field } from 'foobarjs/orm'
+
+export default class SystemLog extends CustomModel {
+  static tableName = 'system_logs'
+
+  static schema = {
+    level: Field.string().enum('info', 'warning', 'error').required(),
+    message: Field.string().required(),
+    source: Field.string().required(),
+    createdAt: Field.date().nullable(),
+  }
+
+  static async $list({ page, perPage, filters, sort, search }) {
+    const res = await fetch(`https://logging-api.example.com/logs?page=${page}`)
+    const json = await res.json()
+    return { data: json.items, meta: { total: json.total, page, perPage } }
+  }
+
+  static async $find(id) {
+    const res = await fetch(`https://logging-api.example.com/logs/${id}`)
+    return await res.json()
+  }
+
+  static async $create(data) {
+    const res = await fetch('https://logging-api.example.com/logs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return await res.json()
+  }
+
+  static async $update(id, data) {
+    const res = await fetch(`https://logging-api.example.com/logs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return await res.json()
+  }
+
+  static async $delete(id) {
+    await fetch(`https://logging-api.example.com/logs/${id}`, { method: 'DELETE' })
+  }
+}
+```
+
+Register it in the admin panel like any other model:
+
+```js
+// app/admin/system-log.admin.js
+import { Admin, Column, Filter } from 'foobarjs/admin'
+import SystemLog from '../models/system-log.model.js'
+
+export default Admin.resource(SystemLog)
+  .label('System Logs', 'Log')
+  .icon('bi-terminal')
+  .group('System')
+  .searchable('message', 'source')
+  .list(list => list
+    .columns([
+      Column.text('id').sortable(),
+      Column.badge('level', { info: 'info', warning: 'warning', error: 'danger' }),
+      Column.text('message'),
+      Column.text('source').sortable(),
+    ])
+    .filters([Filter.select('level')])
+  )
+```
+
+### How it works
+
+- `CustomModel` extends `Model` but bypasses MikroORM entirely — no database table is created.
+- `$list()` receives `{ page, perPage, filters, sort, search }` and must return `{ data, meta: { total, page, perPage } }`.
+- `$find(id)` returns a plain object or `null`.
+- `$create(data)` and `$update(id, data)` return the created/updated object.
+- `$delete(id)` removes the record.
+- The admin panel's list, show, create, edit, and delete views all work transparently.
+- `CustomModel` instances support schema validation — your `static schema` field definitions are enforced on `create()` and `save()`.
+
+### Limitations
+
+- No relation queries (`.where().orderBy().get()`) — list uses `$list()` directly.
+- No eager loading or relations between custom and DB-backed models.
+- `$list()` returns pre-paginated data — the admin passes filter/sort/search params for the implementation to handle.
+
 ## Demo Application
 
 The included demo application (`demo/`) now uses the fluent API. See:
 
 - `demo/app/admin/product.admin.js` — products with money columns, boolean badges, and searchable filters
-- `demo/app/admin/order.admin.js` — orders with status badges, form sections, and dashboard widgets
+- `demo/app/admin/order.admin.js` — orders with ExportAction, CRUD hooks, status badges, form sections, and dashboard widgets
+- `demo/app/admin/system-log.admin.js` — CustomModel with in-memory data source
+- `demo/app/models/system-log.model.js` — CustomModel implementation with `$list`, `$find`, `$create`, `$update`, `$delete`
 
 ## Theme and Branding
 

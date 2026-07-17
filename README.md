@@ -1,6 +1,6 @@
 # foobarjs documentation
 
-> **Experimental — not production ready.** foobarjs is under active development (v0.2.0). APIs, conventions, and database schemas may change between releases without a migration path. Use it for prototyping, learning, and side projects. Do not deploy to production yet.
+> **Experimental — not production ready.** foobarjs is under active development (v0.2.8). APIs, conventions, and database schemas may change between releases without a migration path. Use it for prototyping, learning, and side projects. Do not deploy to production yet.
 
 Documentation for the [foobarjs](https://github.com/foobarjs/foobarjs)
 framework — a batteries-included Node.js MVC framework.

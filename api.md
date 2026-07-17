@@ -102,6 +102,81 @@ A request that fails its rule gets HTTP `401`:
 { "error": "Unauthenticated" }
 ```
 
+## Per-Resource Configuration (Api.resource)
+
+Create files in `app/api/` to customize API behavior per model using the fluent `Api.resource()` builder:
+
+```js
+// app/api/order.api.js
+import { Api } from 'foobarjs/api'
+import Order from '../models/order.model.js'
+
+export default Api.resource(Order)
+  .only(['index', 'show', 'store'])       // only these routes
+  .fillable(['name', 'status', 'total'])   // writable fields (POST/PUT)
+  .hidden(['internal_notes', 'cost'])      // stripped from responses
+  .filterable(['status', 'total'])         // allowed filter[field] params
+  .sortable(['id', 'total', 'created_at']) // allowed sort fields
+  .includable(['items', 'customer'])       // allowed include relations
+  .perPage(50)                             // default page size
+  .maxPerPage(200)                         // max allowed page size
+  .auth({ read: 'public', write: 'token' })
+```
+
+### Configuration Options
+
+| Method | Description |
+|--------|-------------|
+| `only(routes)` | Allow only these routes: `'index'`, `'show'`, `'store'`, `'update'`, `'destroy'` |
+| `except(routes)` | Exclude these routes (inverse of `only`) |
+| `fillable(fields)` | Only these fields are accepted in `POST`/`PUT` bodies |
+| `hidden(fields)` | These fields are stripped from all responses |
+| `filterable(fields)` | Only these fields can be used with `filter[field]=value` |
+| `sortable(fields)` | Only these fields can be used with `?sort=field` |
+| `includable(relations)` | Only these relations can be eager loaded with `?include=` |
+| `perPage(n)` | Default page size for this resource |
+| `maxPerPage(n)` | Maximum allowed `?perPage=` value |
+| `auth(rule)` | Auth rule for this resource (highest precedence). Accepts the same values as `config/api.js` auth. |
+
+### Route filtering
+
+`only` and `except` control which HTTP endpoints are registered. Requests to disabled routes return 404.
+
+```js
+// Read-only API: no create, update, or delete
+Api.resource(Product).only(['index', 'show'])
+
+// Everything except delete
+Api.resource(Order).except(['destroy'])
+```
+
+### Field restrictions
+
+`fillable` restricts which fields are accepted in request bodies. Fields not in the list are silently dropped. `hidden` strips fields from all JSON responses (list, show, create, update).
+
+```js
+Api.resource(User)
+  .fillable(['name', 'email'])    // can't set isAdmin via API
+  .hidden(['password', 'roles'])  // never exposed in responses
+```
+
+### Query restrictions
+
+`filterable`, `sortable`, and `includable` restrict which query parameters are honored. Unknown filter keys, sort fields, or include relations are silently ignored.
+
+### Auth precedence
+
+When `Api.resource()` sets `.auth()`, it takes the highest precedence:
+
+1. `Api.resource(Model).auth(...)` — per-resource config file
+2. `config/api.js` → `models[ModelName]` — global per-model override
+3. `static apiAuth` on the model class
+4. `config/api.js` → `auth` — global default
+
+### Discovery
+
+API config files are auto-discovered from `app/api/`. The filename convention is `<model>.api.js` (e.g., `order.api.js`). The file must export an `Api.resource()` instance as the default export.
+
 ## Opting out
 
 Hide a model from the API entirely with a static property:

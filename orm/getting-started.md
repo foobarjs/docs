@@ -316,6 +316,167 @@ Once your models are set up, get their tables into the database:
 The framework never auto-syncs your schema at server boot when migration
 files exist.
 
+## Multiple Connections
+
+Models can target different databases. The default connection is configured in `config/database.js`; additional named connections go in a `connections` map:
+
+```js
+// config/database.js
+export default {
+  connection: 'sqlite',
+  database: 'foobar.db',
+
+  connections: {
+    legacy: {
+      connection: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      database: 'legacy_app',
+      user: 'readonly_user',
+      password: process.env.LEGACY_DB_PASSWORD,
+    },
+    analytics: {
+      connection: 'mysql',
+      host: 'analytics.internal',
+      database: 'analytics',
+      user: 'app',
+      password: process.env.ANALYTICS_DB_PASSWORD,
+    },
+  },
+}
+```
+
+Point a model at a named connection with `static connection`:
+
+```js
+import { Model, Field } from 'foobarjs/orm'
+
+export default class LegacyOrder extends Model {
+  static connection = 'legacy'
+  static tableName = 'orders'
+
+  static schema = {
+    orderNumber: Field.string(),
+    customer: Field.string(),
+    total: Field.float(),
+    status: Field.string(),
+  }
+}
+```
+
+Once declared, all ORM operations on that model — `find`, `all`, `query()`, `save()`, `transaction()` — route to the named connection automatically. Models without `static connection` use the default.
+
+Named connections **skip schema sync by default** — you're connecting to an existing database, so the framework won't try to create or modify tables. Set `autoSync: true` on a named connection config if you want the framework to manage its schema.
+
+Framework-owned tables (admin_exports, queue_jobs, failed_jobs, etc.) always live on the default connection.
+
+### Cross-connection relationships
+
+Relations between models on different connections work for `belongsTo`, `hasMany`, and `hasOne`. The framework loads relations via separate queries (never JOINs), so each model's query routes to its own connection independently.
+
+```js
+// Product on SQLite (default), Category on Postgres (legacy)
+class Product extends Model {
+  static schema = {
+    name: Field.string(),
+    category: Field.belongsTo('Category'), // just a category_id integer column
+  }
+}
+
+class Category extends Model {
+  static connection = 'legacy'
+  static schema = {
+    name: Field.string(),
+    products: Field.hasMany('Product'),
+  }
+}
+
+// Works — two separate queries, one per connection
+const products = await Product.query().with('category').get()
+```
+
+**How schema works:** `belongsTo` creates a plain indexed integer column (`category_id`) on the owning model's table — no foreign key constraint. Referential integrity is handled at the application level by the query builder, not the database.
+
+| Relationship | Cross-connection | Notes |
+|---|---|---|
+| `belongsTo` | Supported | FK column on owning model, loaded via separate query |
+| `hasMany` | Supported | Loaded via `WHERE fk_id IN (...)` on related model's connection |
+| `hasOne` | Supported | Same as hasMany, returns first match |
+| `belongsToMany` | Not supported | Pivot table must live on one connection; cannot span two databases |
+
+> **Warning:** `belongsToMany` (many-to-many) requires a pivot table. Since the pivot table can only exist on one database, both models and the pivot table must share the same connection. Declaring a `belongsToMany` across connections will silently fail when the pivot table is not found.
+
+### Transactions
+
+Transactions are per-connection. `LegacyOrder.transaction(...)` opens a transaction on the `legacy` connection only — it cannot span multiple databases.
+
+```js
+// This wraps only the legacy connection in a transaction
+await LegacyOrder.transaction(async () => {
+  const order = await LegacyOrder.create({ ... })
+  // Product.create() here is NOT in this transaction — it's on a different connection
+  await Product.create({ ... })
+})
+```
+
+> **Caution:** If you need atomic operations across models on different connections, you must handle rollback logic manually. A failure in one connection will not roll back changes on the other.
+
+### Other limitations
+
+- If a model declares a connection name that doesn't exist in config, it falls back to the default connection with a warning.
+- Framework-owned tables (admin_exports, queue_jobs, failed_jobs, etc.) always live on the default connection.
+
+### Read-only connections and models
+
+You can mark a connection or model as read-only to prevent accidental writes.
+
+**Connection-level readOnly** — all models on this connection inherit the flag:
+
+```js
+// config/database.js
+export default {
+  connection: 'sqlite',
+  connections: {
+    analytics: {
+      connection: 'postgres',
+      host: 'analytics-replica.internal',
+      database: 'analytics',
+      readOnly: true,
+    },
+  },
+}
+```
+
+**Model-level readOnly** — overrides the connection setting:
+
+```js
+class AuditLog extends Model {
+  static connection = 'analytics'
+  static readOnly = true   // always read-only regardless of connection config
+
+  static schema = {
+    action: Field.string(),
+    details: Field.text(),
+  }
+}
+```
+
+The precedence is: `Model.readOnly > connection.readOnly > default (false)`. A model with `static readOnly = false` on a readOnly connection can still write.
+
+When a model is read-only:
+
+- **ORM**: `Model.create()`, `item.save()`, `item.delete()`, `query.updateAll()`, and `query.deleteAll()` throw an error.
+- **Admin UI**: "New" button, Edit links, Delete buttons, and destructive bulk actions are hidden automatically.
+- **API**: `POST`, `PUT/PATCH`, and `DELETE` routes are not registered.
+
+You can check programmatically:
+
+```js
+if (AuditLog.isReadOnly()) {
+  // read-only — skip write logic
+}
+```
+
 ## Retrieving Models
 
 Every query method works directly on the Model — no need to call `.query()` first:
@@ -401,7 +562,6 @@ const products = await Product.whereHas('category', qb => {
 
 // Select specific columns
 const slim = await Product.select(['id', 'name', 'price']).get()
-```
 
 // Chunk — process large result sets in batches
 await Product.chunk(100, (records, page) => {
@@ -1031,3 +1191,37 @@ const rows = await qb.select(['id', 'name']).execute('all')
 ```
 
 CTEs, joins, sub-queries, `INSERT INTO ... SELECT`, `FOR UPDATE` locks — all available on the returned builder.
+
+## CustomModel
+
+`CustomModel` extends `Model` for non-database data sources (REST APIs, CSV files, in-memory data). It bypasses MikroORM entirely — no table is created — and routes all CRUD through methods you implement.
+
+```js
+import { CustomModel, Field } from 'foobarjs/orm'
+
+export default class ExternalOrder extends CustomModel {
+  static tableName = 'external_orders'
+
+  static schema = {
+    orderId: Field.string(),
+    customer: Field.string(),
+    total: Field.float(),
+    status: Field.string().enum('pending', 'shipped'),
+  }
+
+  static async $list({ page, perPage, filters, sort, search }) {
+    const res = await fetch(`https://api.example.com/orders?page=${page}`)
+    const json = await res.json()
+    return { data: json.items, meta: { total: json.total, page, perPage } }
+  }
+
+  static async $find(id) { /* return plain object or null */ }
+  static async $create(data) { /* return created object */ }
+  static async $update(id, data) { /* return updated object */ }
+  static async $delete(id) { /* void */ }
+}
+```
+
+All standard model operations (`find()`, `create()`, `save()`, `delete()`, `all()`, `first()`) route through your `$` methods. Schema validation still runs on `create()` and `save()`.
+
+`CustomModel` works with the admin panel — see [Custom Data Sources](../admin-panel.md#custom-data-sources-custommodel).
