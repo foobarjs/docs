@@ -1,3 +1,4 @@
+{% raw %}
 ---
 title: Middleware
 layout: default
@@ -349,3 +350,4 @@ The `Controller` base class wraps `c` with convenience methods so you rarely nee
 - Apply middleware to routes: [Routing](./routing.md)
 - Apply middleware to controllers: [Controllers](./controllers.md)
 - Auth middleware details: [Authentication](./authentication.md)
+{% endraw %}

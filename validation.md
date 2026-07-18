@@ -1,3 +1,4 @@
+{% raw %}
 # Validation
 
 foobarjs includes a validation system integrated with the ORM. Validation rules are defined in model schemas and auto-run on every `save()`. The framework also translates database constraint violations (unique, not-null, foreign key, check) into the same `ValidationError` so form UIs can surface them uniformly.
@@ -223,3 +224,4 @@ The API plugin returns validation failures as JSON:
 ```
 
 with status `422`.
+{% endraw %}

@@ -1,3 +1,4 @@
+{% raw %}
 # Views
 
 foobarjs supports two view engines: **JSX** (recommended) and an Edge-inspired
@@ -408,3 +409,4 @@ by including it in your layout or bundling it into `public/`.
 - Handle form submissions and validation: [Validation](./validation.md)
 - Sharing data with views from middleware: [Middleware](./middleware.md#sharing-data-with-views)
 - Sessions and flash messages: [Session](./session.md)
+{% endraw %}

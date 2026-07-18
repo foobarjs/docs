@@ -1,3 +1,4 @@
+{% raw %}
 # Session
 
 foobarjs provides cookie-based sessions out of the box via the `foobarjs/auth` plugin.
@@ -126,3 +127,4 @@ APP_SECRET=...
 ```
 
 The auth plugin requires `APP_SECRET` and will throw a clear error at boot if it is missing.
+{% endraw %}

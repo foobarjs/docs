@@ -1,3 +1,4 @@
+{% raw %}
 # Error Handling
 
 foobarjs ships with a full error-handling pipeline: a central `ErrorHandler` catches every unhandled error, decides whether to render an HTML error page or a JSON response, and logs the incident.
@@ -259,3 +260,4 @@ test('missing order returns 404', async ({ request }) => {
   assert.strictEqual(res.status, 404)
 })
 ```
+{% endraw %}

@@ -1,3 +1,4 @@
+{% raw %}
 # Routing
 
 foobarjs supports two ways to register routes:
@@ -280,3 +281,4 @@ Uri.current(c)
 - Write the controllers your routes point at: [Controllers](./controllers.md)
 - Render responses: [Views](./views.md)
 - Auto-generated REST API for models: [API](./api.md)
+{% endraw %}
