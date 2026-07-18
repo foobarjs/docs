@@ -1082,21 +1082,21 @@ Fetch relation counts, sums, and other aggregates alongside models — batched i
 ```js
 // Count of items in the relation
 await Category.query().withCount('products').get()
-// → each category has a `products_count` number
+// → each category has a `productsCount` number
 
 // Sum of a column across the relation
 await Category.query().withSum('products', 'price').get()
-// → each category has `products_sum_price`
+// → each category has `productsSumPrice`
 
 // Also: withAvg, withMin, withMax
 await Category.query().withAvg('products', 'price').get()
-// → category.products_avg_price
+// → category.productsAvgPrice
 await Category.query().withMax('products', 'createdAt').get()
-// → category.products_max_createdAt
+// → category.productsMaxCreatedAt
 
 // Existence flag
 await Category.query().withExists('products').get()
-// → each category has a boolean `products_exists`
+// → each category has a boolean `productsExists`
 ```
 
 All `withCount`/`withSum`/... use a single `GROUP BY` query per relation, so a list of 500 categories with a `withSum('products', 'price')` is 2 queries total: 1 for the categories, 1 for the sums.

@@ -449,6 +449,7 @@ Field.text('name').required().placeholder('Product name')
 Field.textarea('description')
 Field.email('contact_email')
 Field.select('status', [{ value: 'draft', label: 'Draft' }])
+Field.json('metadata')  // monospace textarea with JSON validation hint; auto-parses on submit
 Field.belongsTo('category').label('Category')
 Field.belongsToMany('tags').label('Tags')
 ```
@@ -595,7 +596,29 @@ export default Admin.resource(Order)
   )
 ```
 
-Inline action handlers receive the record and a context object `{ foobar, Model, c }`. They can return a string to flash as a success message. Bulk action handlers receive the selected ids and the same context object.
+Inline action handlers receive the record and a context object `{ foobar, Model, c, formData, flash, redirect }`. Returning a plain string still works as a success flash (backward compatible). For more control, use the context methods:
+
+- `ctx.flash(type, message)` — return a typed flash message. `type` is one of `'success'`, `'warning'`, `'danger'`, or `'info'`.
+- `ctx.redirect(url)` — redirect to a URL instead of back to the list.
+
+Bulk action handlers receive the selected ids and the same context object.
+
+```js
+// Return a string — renders as a success flash
+.handler(async (item, ctx) => {
+  return 'Done!'
+})
+
+// Return a typed flash message
+.handler(async (item, ctx) => {
+  return ctx.flash('warning', 'Completed with warnings.')
+})
+
+// Redirect to a different URL (e.g. a download)
+.handler(async (item, ctx) => {
+  return ctx.redirect(`/admin/exports/${item.id}/download`)
+})
+```
 
 #### Authorizing actions
 
@@ -786,7 +809,7 @@ Admin.resource(Order)
 |--------|-------------|
 | `make(name?, label?)` | Factory. Optional `name` identifies the action for queued exports (default `'export'`). Optional `label` sets the button text (default `'Export'`). |
 | `label(string)` | Override the button label after construction. |
-| `filename(string \| fn)` | Custom filename (without `.csv`). Accepts a string or a `(query) => string` function. |
+| `filename(string \| fn)` | Custom filename (without `.csv`). Accepts a string or a `(query) => string` function. An ISO timestamp is automatically appended to prevent overwriting (e.g. `orders-export-2026-07-18T05-06-51.csv`). |
 | `columns(array \| object)` | Columns to export. Array of field names (or mixed with computed columns), or an object where keys are headers and values are field names or formatter functions. |
 | `delimiter(string)` | CSV delimiter (default `,`). Use `';'` for European locales. |
 | `dateFormat(string)` | Date format string (e.g. `'YYYY-MM-DD'`). Uses dayjs format tokens. Default is ISO 8601. |
@@ -809,6 +832,28 @@ The object form also supports renaming: `{ 'Order #': 'id', 'Amount': (val, reco
 Without an `ExportAction`, the built-in export uses the model's table name as filename, all list columns, comma delimiter, and ISO dates.
 
 When **foobarjs/notifications** is registered, completing exports create a database notification for the initiating user with a `downloadUrl`.
+
+### Extending AdminExport
+
+Userland apps can extend framework-defined models like `AdminExport` using `Admin.resource()`. Your config layers on top of the model's `adminDefaults` via the merge system — actions are concatenated, not replaced:
+
+```js
+// app/admin/export.admin.js
+import { Admin, Action, Field } from 'foobarjs/admin'
+import { AdminExport } from 'foobarjs/admin'
+
+export default Admin.resource(AdminExport)
+  .list(list => list
+    .actions([
+      Action.make('download', 'Download')
+        .icon('bi-download')
+        .can('view')
+        .visible(({ item }) => item.status === 'complete' && !!item.filePath)
+        .handler((item, ctx) => ctx.redirect(`/admin/exports/${item.id}/download`))
+        .confirm(),
+    ])
+  )
+```
 
 ## Dashboard Widgets
 
@@ -1293,6 +1338,16 @@ Admin.resource(Order).detail(detail => detail
 ```
 
 On the detail page, `belongsTo` values are rendered as clickable chip links to the related record. `belongsToMany` values become a chip list, capped at 10 with a "+N more" indicator.
+
+### Custom field display
+
+Use `Field.display(fn)` to render custom HTML for a field in the detail view. The callback receives the model instance and returns an HTML string:
+
+```js
+Field.make('filePath').display((item) => {
+  return `<a href="/download/${item.id}">${item.filePath}</a>`
+})
+```
 
 ## Prefs Endpoint
 
