@@ -93,12 +93,84 @@ The `plugins` key defines which first-party plugins to load at boot.
 
 ### `config/database.js`
 
+The `connection` key determines the database driver. Supported values:
+`sqlite`, `postgres`, `mysql`, `mongodb`.
+
+**SQLite** (default):
+
 ```js
 export default {
   connection: process.env.DB_CONNECTION || 'sqlite',
   database: process.env.DB_DATABASE || 'foobar.db',
 }
 ```
+
+**PostgreSQL**:
+
+```js
+export default {
+  connection: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 5432),
+  database: process.env.DB_DATABASE || 'myapp',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+}
+```
+
+**MySQL**:
+
+```js
+export default {
+  connection: 'mysql',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 3306),
+  database: process.env.DB_DATABASE || 'myapp',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+}
+```
+
+**Multiple connections** — add named connections under `connections`. Each
+named connection specifies its own driver via `connection`:
+
+```js
+export default {
+  connection: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 5432),
+  database: process.env.DB_DATABASE || 'myapp',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+
+  connections: {
+    analytics: {
+      connection: 'mysql',
+      host: process.env.ANALYTICS_DB_HOST || 'localhost',
+      port: Number(process.env.ANALYTICS_DB_PORT || 3306),
+      database: 'analytics',
+      user: process.env.ANALYTICS_DB_USER || 'root',
+      password: process.env.ANALYTICS_DB_PASSWORD || '',
+    },
+    logs: {
+      connection: 'sqlite',
+      database: 'logs.db',
+    },
+  },
+}
+```
+
+Point a model at a named connection with `static connection`:
+
+```js
+class PageView extends Model {
+  static connection = 'analytics'
+}
+```
+
+See [ORM: Multiple Connections](./orm/getting-started.md#multiple-connections)
+for details on cross-connection relationships, transactions, and read-only
+connections.
 
 ### `config/session.js`
 

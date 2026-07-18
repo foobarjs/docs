@@ -42,6 +42,7 @@ Direct access to the underlying request context.
 | `this.back()` / `this.back(status)` | Redirect to the `Referer` header (or `/`). |
 | `this.view(template, data)` | Alias for `this.render()`. |
 | `this.flash(key, message)` | Set a one-shot session flash. Chainable. |
+| `this.share(key, value)` | Share a value with all views rendered during this request. Chainable. |
 | `this.wantsJson()` | `true` when the request accepts JSON (checks `Accept` and `Content-Type`). |
 
 ## Convenience accessors
@@ -119,6 +120,26 @@ class AdminReportsController extends Controller {
 ```
 
 Controller middleware stacks with group middleware from `router.group()` — group middleware runs first, then controller middleware.
+
+### Opting out of auto-applied middleware
+
+Use `static withoutMiddleware` to skip middleware that was auto-discovered from `app/middlewares/`. Pass middleware names (derived from the filename) or imported references:
+
+```js
+class WebhookController extends Controller {
+  static withoutMiddleware = ['Csrf', 'CartShare']
+}
+```
+
+```js
+import CartShare from '../app/middlewares/CartShare.js'
+
+class ApiController extends Controller {
+  static withoutMiddleware = [CartShare]
+}
+```
+
+See [Middleware](./middleware.md) for more on the folder convention and opt-out mechanism.
 
 ### Writing a middleware class
 

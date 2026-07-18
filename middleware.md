@@ -6,15 +6,44 @@ nav_order: 7
 
 # Middleware
 
-Middleware runs before your route handler, letting you inspect or modify the request, short-circuit with a response, or run code after the handler completes.
+Middleware runs before your route handler, letting you inspect or modify the request, short-circuit with a response, share data with views, or run code after the handler completes.
 
-## Writing Middleware
+## What middleware does
 
-A middleware is any class with a `handle(c, next)` method:
+Middleware serves three jobs:
+
+| Job | Pattern | Example |
+|-----|---------|---------|
+| **Guard** | Check a condition, abort or redirect if it fails | Auth gate, role check, IP allowlist |
+| **Share** | Enrich the request with data for views | `c.share('cartCount', n)` — available in Blade and JSX via `useView()` |
+| **Transform** | Modify the response on the way out | Cache headers, compression, timing |
+
+## Writing middleware
+
+### Async function (recommended)
+
+The simplest form — an `async function` that receives the context and a `next` callback:
 
 ```js
-// app/middleware/admin-only.js
-export default class AdminOnlyMiddleware {
+// app/middlewares/CartShare.js
+export default async function CartShare(c, next) {
+  const session = c.get('session')
+  const cart = session?.get('cart') || []
+  const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
+  c.share('cartCount', cartCount)
+  await next()
+}
+```
+
+Call `await next()` to pass control to the next middleware or handler. Return a response early to short-circuit the chain.
+
+### Class with `handle()`
+
+A class with a `handle(c, next)` method also works as middleware:
+
+```js
+// app/middlewares/AdminOnly.js
+export default class AdminOnly {
   async handle(c, next) {
     const user = c.get('user')
     if (!user?.isAdmin) {
@@ -25,34 +54,168 @@ export default class AdminOnlyMiddleware {
 }
 ```
 
-Call `await next()` to pass control to the next middleware or handler. Return a response early to short-circuit the chain.
-
-You can also run code after the handler:
+### Running code after the handler
 
 ```js
-export default class TimingMiddleware {
-  async handle(c, next) {
-    const start = Date.now()
+export default async function Timing(c, next) {
+  const start = Date.now()
+  await next()
+  c.header('X-Response-Time', `${Date.now() - start}ms`)
+}
+```
+
+### Factory middleware (configurable)
+
+When middleware needs configuration, export a regular (sync) function that returns the actual middleware:
+
+```js
+// app/middlewares/RateLimit.js
+export default function RateLimit(options = {}) {
+  const max = options.max || 100
+  return async (c, next) => {
+    // rate limiting logic using `max`
     await next()
-    c.header('X-Response-Time', `${Date.now() - start}ms`)
   }
 }
 ```
 
-Plain functions also work as middleware:
+Factories are **not auto-applied** — they must be used explicitly in routes or groups (see [Applying middleware](#applying-middleware) below). The framework detects factories by checking if the export is a regular (non-async) function. If you accidentally write a sync middleware that should be auto-applied, the framework logs a warning.
+
+## Sharing data with views
+
+Use `c.share(key, value)` in middleware to pass data to all views rendered during the request. Shared data is available in Blade templates as top-level variables and in JSX views via `useView()`.
 
 ```js
-const logRequest = async (c, next) => {
-  console.log(`${c.req.method} ${c.req.url}`)
+// app/middlewares/CartShare.js
+export default async function CartShare(c, next) {
+  const session = c.get('session')
+  const cart = session?.get('cart') || []
+  c.share('cartCount', cart.reduce((sum, item) => sum + (item.quantity || 0), 0))
   await next()
 }
 ```
 
-## Applying Middleware
+In Blade:
+```html
+<a href="/cart">Cart ({{ cartCount }})</a>
+```
+
+In JSX:
+```jsx
+import { useView } from 'foobarjs/jsx'
+
+function Header() {
+  const { cartCount } = useView()
+  return <a href="/cart">Cart ({cartCount})</a>
+}
+```
+
+Controllers can also share data directly:
+
+```js
+class DashboardController extends Controller {
+  async index() {
+    this.share('pageTitle', 'Dashboard')
+    return this.render('dashboard/index')
+  }
+}
+```
+
+## Middleware folder convention
+
+Where middleware lives determines its scope:
+
+```
+app/middlewares/
+  CartShare.js          ← auto-applied to every request
+  Analytics.js          ← auto-applied to every request
+  RateLimit.js          ← factory — NOT auto-applied, use explicitly
+app/middlewares/web/
+  ThemeLoader.js        ← auto-applied to web routes only
+app/middlewares/api/
+  ApiVersion.js         ← auto-applied to API routes only
+```
+
+| Location | Scope |
+|----------|-------|
+| `app/middlewares/*.js` | Every request (global) |
+| `app/middlewares/web/*.js` | Web routes (`routes/web.js` + convention routes) |
+| `app/middlewares/api/*.js` | API routes (`routes/api.js`) |
+
+Middleware runs in alphabetical order within each folder. Prefix with `01-`, `02-` if you need explicit ordering. Only `.js` files directly in the folder are loaded — subdirectories other than `web/` and `api/` are ignored.
+
+### Auto-apply rules
+
+| Export type | Auto-applied? | Why |
+|-------------|---------------|-----|
+| `async function` | Yes | Middleware must be async (it calls `await next()`) |
+| Class with `handle()` | Yes | Instantiated, `handle(c, next)` is called |
+| Regular `function` | No — treated as factory | Sync functions return configured middleware |
+
+## Applying middleware
+
+### On a route (inline)
+
+Pass middleware between the path and handler:
+
+```js
+// routes/web.js
+import { RequireAuthMiddleware } from 'foobarjs/auth'
+
+export default function (router) {
+  router.get('/dashboard', RequireAuthMiddleware, (c) => {
+    return c.json({ user: c.get('user') })
+  })
+}
+```
+
+### On a route (fluent)
+
+Route methods return a chainable object. Use `.middleware()` to add and `.withoutMiddleware()` to remove:
+
+```js
+import RateLimit from '../app/middlewares/RateLimit.js'
+
+router.post('/webhook/stripe', WebhookController, 'handle')
+  .withoutMiddleware(['Csrf'])
+
+router.get('/dashboard', DashboardController, 'index')
+  .middleware([RateLimit({ max: 100 })])
+```
+
+### On a group of routes
+
+Use `router.group()` to apply middleware to multiple routes:
+
+```js
+import { RequireAuthMiddleware } from 'foobarjs/auth'
+
+export default function (router) {
+  router.get('/health', (c) => c.json({ status: 'ok' }))
+
+  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+    router.get('/dashboard', DashboardController, 'index')
+    router.resource('orders', OrdersController)
+  })
+}
+```
+
+Groups also support fluent `.withoutMiddleware()` and `.middleware()`:
+
+```js
+router.group({ prefix: '/webhooks' }, (r) => {
+  r.post('/stripe', WebhookController, 'stripe')
+  r.post('/github', WebhookController, 'github')
+}).withoutMiddleware(['Csrf'])
+
+router.group({ prefix: '/api/v2' }, (r) => {
+  r.resource('items', ItemsController)
+}).withoutMiddleware(['Csrf']).middleware([RateLimit({ max: 50 })])
+```
 
 ### On a controller
 
-Use `static middleware` to apply middleware to all actions on a controller:
+Use `static middleware` to apply middleware to all actions:
 
 ```js
 import { Controller } from 'foobarjs/core'
@@ -74,93 +237,45 @@ class PostsController extends Controller {
     use: [RequireAuthMiddleware],
     only: ['store', 'update', 'destroy'],
   }
-
-  index() { /* public */ }
-  show() { /* public */ }
-  store() { /* auth required */ }
 }
 ```
 
+## Opting out of middleware
+
+Use `static withoutMiddleware` on a controller to skip auto-applied middleware by name or reference:
+
 ```js
-class ArticlesController extends Controller {
-  static middleware = {
-    use: [RequireAuthMiddleware],
-    except: ['index', 'show'],
-  }
+// By name (derived from filename)
+class WebhookController extends Controller {
+  static withoutMiddleware = ['Csrf', 'CartShare']
+}
+
+// By reference (imported function/class)
+import CartShare from '../app/middlewares/CartShare.js'
+
+class ApiController extends Controller {
+  static withoutMiddleware = [CartShare]
 }
 ```
 
-### On a route
+Route-level and group-level opt-out use the fluent `.withoutMiddleware()` method (shown above).
 
-Pass middleware between the path and handler:
+Opt-outs from all three sources (controller, group, route) are combined — if any source opts out of a middleware, it won't run.
 
-```js
-// routes/web.js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
-import AdminOnlyMiddleware from '../app/middleware/admin-only.js'
-
-export default function (router) {
-  router.get('/dashboard', RequireAuthMiddleware, (c) => {
-    return c.json({ user: c.get('user') })
-  })
-
-  router.get('/admin/stats', RequireAuthMiddleware, AdminOnlyMiddleware, (c) => {
-    return c.json({ stats: true })
-  })
-}
-```
-
-### On a group of routes
-
-Use `router.group()` to apply middleware to multiple routes at once:
-
-```js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
-
-export default function (router) {
-  // Public
-  router.get('/health', (c) => c.json({ status: 'ok' }))
-
-  // Protected
-  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
-    router.get('/dashboard', DashboardController, 'index')
-    router.get('/settings', SettingsController, 'index')
-    router.resource('orders', OrdersController)
-  })
-}
-```
-
-Groups support `prefix` to namespace URLs:
-
-```js
-router.group({ prefix: '/api/v1', middleware: [RequireAuthMiddleware] }, (router) => {
-  router.get('/users', UsersController, 'index')    // → GET /api/v1/users
-  router.get('/posts', PostsController, 'index')    // → GET /api/v1/posts
-})
-```
-
-Groups can be nested — prefixes concatenate and middleware stacks:
-
-```js
-router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) => {
-  router.group({ prefix: '/v1' }, (router) => {
-    router.get('/items', ItemsController, 'index')  // → GET /api/v1/items
-  })
-})
-```
-
-## Middleware Stacking Order
+## Middleware stacking order
 
 When multiple middleware sources apply to a route, they run in this order:
 
-1. **Global middleware** (session, auth loading, CSRF, CORS — applied by the framework)
-2. **Group middleware** (from `router.group()`, outer groups first)
-3. **Controller middleware** (from `static middleware`)
-4. **Inline middleware** (passed directly on the route)
+1. **Framework middleware** (session, auth loading, CSRF, CORS — applied by the framework core)
+2. **Auto-discovered user middleware** (from `app/middlewares/` folders, filtered by opt-outs)
+3. **Group middleware** (from `router.group()`, outer groups first)
+4. **Controller middleware** (from `static middleware`)
+5. **Inline middleware** (passed directly on the route)
+6. **Fluent `.middleware()`** additions
 
-## Built-in Middleware
+## Built-in middleware
 
-These are applied globally by the framework and plugins:
+Applied globally by the framework:
 
 | Middleware | Source | Description |
 |------------|--------|-------------|
@@ -171,22 +286,65 @@ These are applied globally by the framework and plugins:
 | Rate limiting | Framework core | Request throttling (configurable in `config/security.js`) |
 | Secure headers | Framework core | Security-related HTTP headers |
 
-These are available for you to apply where needed:
+Available for explicit use:
 
 | Class | Import | Description |
 |-------|--------|-------------|
 | `RequireAuthMiddleware` | `foobarjs/auth` | Rejects unauthenticated requests (redirect or 401) |
 | `GuestMiddleware` | `foobarjs/auth` | Redirects authenticated users away |
 
-## File Convention
+## The request context (`c`)
 
-| Pattern | Location |
-|---------|----------|
-| `*.js` | `app/middleware/` |
+`c` is Hono's `Context` object — the per-request container passed to every middleware and route handler. Controllers access it as `this.c`.
 
-Place your middleware files in `app/middleware/` and import them where needed.
+### Core API
 
-## Next Steps
+| Method | Description |
+|--------|-------------|
+| `c.req` | The incoming request object |
+| `c.req.param('name')` | Route parameter |
+| `c.req.query('key')` | Query string parameter |
+| `c.req.header('name')` | Request header |
+| `c.json(data, status?)` | Return a JSON response |
+| `c.html(html)` | Return an HTML response |
+| `c.text(body, status?)` | Return a plain text response |
+| `c.redirect(url, status?)` | Return a redirect response |
+| `c.header(name, value)` | Set a response header |
+| `c.set(key, value)` | Store a value for this request |
+| `c.get(key)` | Retrieve a stored value |
+| `c.share(key, value)` | Share a value with all views rendered during this request |
+
+### Framework-decorated values
+
+These are set by framework middleware and available via `c.get()`:
+
+| Key | Type | Set by |
+|-----|------|--------|
+| `session` | Session object | Auth plugin |
+| `user` | User model instance or `null` | Auth plugin |
+| `loggedIn` | `boolean` | Auth plugin |
+| `configLoader` | ConfigLoader instance | Framework core |
+| `render` | `async (template, data) => html` | View engine |
+| `viewEngine` | View engine instance | View engine |
+
+### Controller convenience methods
+
+The `Controller` base class wraps `c` with convenience methods so you rarely need `c` directly:
+
+| Controller method | Equivalent `c` call |
+|-------------------|---------------------|
+| `this.render(template, data)` | `c.render(template, data)` |
+| `this.json(data)` | `c.json(data)` |
+| `this.redirect(path)` | Returns a `RedirectResponse` builder |
+| `this.share(key, value)` | `c.share(key, value)` |
+| `this.flash(key, message)` | `c.get('session').flash(key, message)` |
+| `this.params()` | `c.req.param()` |
+| `this.query()` | `c.req.query()` |
+| `this.body()` | Parsed request body (JSON or form) |
+| `this.config(key)` | `c.get('configLoader').get(key)` |
+| `this.validate(Class)` | `c.validate(Class)` |
+
+## Next steps
 
 - Apply middleware to routes: [Routing](./routing.md)
 - Apply middleware to controllers: [Controllers](./controllers.md)

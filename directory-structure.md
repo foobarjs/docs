@@ -11,7 +11,9 @@ my-app/
 │   │   ├── layouts/       # Layout templates
 │   │   └── errors/        # 404/403/500/419 overrides
 │   ├── admin/             # Admin panel resource configs
-│   ├── middleware/        # Custom middleware
+│   ├── middlewares/       # Custom middleware (auto-applied)
+│   │   ├── web/           # Web-only middleware
+│   │   └── api/           # API-only middleware
 │   ├── validators/        # FormRequest subclasses
 │   ├── serializers/       # API response shapers
 │   ├── jobs/              # Queue jobs
@@ -45,7 +47,7 @@ Foobarjs walks specific directories at boot and wires things up by convention.
 | `app/models/` | Registered with the ORM. The default-exported class from each file is imported and registered. Table name derives from the class name: `User` → `users`, `OrderItem` → `order_items`. Override with `static tableName`. |
 | `app/views/` | Available to `this.render('folder/file')` from a controller. |
 | `app/admin/` | Registered with the admin panel. `product.admin.js` mounts under `/admin/products`. |
-| `app/middleware/` | Available by name for route assignment. |
+| `app/middlewares/` | Async functions and classes are auto-applied globally. `web/` and `api/` subdirectories scope to those route files. Sync functions (factories) are available for explicit use. |
 | `app/jobs/` | Registered with the queue system. |
 | `app/events/` | Event classes for dispatch/listener wiring. |
 | `app/listeners/` | Auto-discovered via `static events = [...]`. |

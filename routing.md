@@ -62,6 +62,25 @@ router.get('/dashboard', RequireAuthMiddleware, (c) => {
 
 Any class with a `handle(c, next)` method works as middleware — pass the class itself (it will be instantiated automatically) or an instance.
 
+### Fluent middleware API
+
+Route methods return a chainable object with `.withoutMiddleware()` and `.middleware()`:
+
+```js
+import RateLimit from '../app/middlewares/RateLimit.js'
+
+// Opt out of auto-applied middleware
+router.post('/webhook/stripe', WebhookController, 'handle')
+  .withoutMiddleware(['Csrf'])
+
+// Add a factory middleware
+router.get('/dashboard', DashboardController, 'index')
+  .middleware([RateLimit({ max: 100 })])
+  .withoutMiddleware(['Analytics'])
+```
+
+Pass middleware names (strings, derived from filenames) or imported references.
+
 ### `router.resource(path, ControllerClass)`
 
 Registers up to seven routes, but only for actions the controller actually
@@ -134,6 +153,15 @@ router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) =
 ```
 
 Middleware only applies inside the group — routes defined outside are unaffected.
+
+Groups also support fluent `.withoutMiddleware()` and `.middleware()`:
+
+```js
+router.group({ prefix: '/webhooks' }, (r) => {
+  r.post('/stripe', WebhookController, 'stripe')
+  r.post('/github', WebhookController, 'github')
+}).withoutMiddleware(['Csrf'])
+```
 
 ## Convention routes
 

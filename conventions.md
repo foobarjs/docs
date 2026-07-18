@@ -26,7 +26,9 @@ Guiding principles:
 | `app/controllers/**/*.controller.js` | Mounts a REST resource per file. Only actions you define get routes. `home.controller.js` also mounts at `/`. Sub-folders become URL prefixes (`admin/orders.controller.js` → `/admin/orders`). |
 | `app/models/**/*.model.js` | Imports the default export and registers it with the ORM. Class extends `Model` (or `AuthenticableModel`). |
 | `app/admin/**/*.admin.js` | Registers an admin panel resource config. |
-| `app/middleware/**/*.js` | Available for route assignment by name. |
+| `app/middlewares/*.js` | Async functions and classes with `handle()` are auto-applied globally. Sync functions (factories) are available for explicit use. |
+| `app/middlewares/web/*.js` | Auto-applied to web routes (`routes/web.js` + convention routes) only. |
+| `app/middlewares/api/*.js` | Auto-applied to API routes (`routes/api.js`) only. |
 | `app/jobs/**/*.js` | Registered with the queue system. |
 | `app/events/**/*.js` | Registered as event classes. |
 | `app/listeners/**/*.js` | Auto-discovered via `static events = [...]`. |
