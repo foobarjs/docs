@@ -318,17 +318,17 @@ files exist.
 
 ## Multiple Connections
 
-Models can target different databases. The default connection is configured in `config/database.js`; additional named connections go in a `connections` map:
+Models can target different databases. The default driver is configured in `config/database.js`; additional named connections go in a `connections` map:
 
 ```js
 // config/database.js
 export default {
-  connection: 'sqlite',
+  driver: 'sqlite',
   database: 'foobar.db',
 
   connections: {
     legacy: {
-      connection: 'postgres',
+      driver: 'postgres',
       host: 'localhost',
       port: 5432,
       database: 'legacy_app',
@@ -336,7 +336,7 @@ export default {
       password: process.env.LEGACY_DB_PASSWORD,
     },
     analytics: {
-      connection: 'mysql',
+      driver: 'mysql',
       host: 'analytics.internal',
       database: 'analytics',
       user: 'app',
@@ -435,10 +435,10 @@ You can mark a connection or model as read-only to prevent accidental writes.
 ```js
 // config/database.js
 export default {
-  connection: 'sqlite',
+  driver: 'sqlite',
   connections: {
     analytics: {
-      connection: 'postgres',
+      driver: 'postgres',
       host: 'analytics-replica.internal',
       database: 'analytics',
       readOnly: true,

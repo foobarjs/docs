@@ -16,7 +16,7 @@ The framework ships with sensible defaults for every config key. You only need t
 | `app.log.maxSize` | `10485760` (10 MB) | Rotate when daily log exceeds this size |
 | `app.log.maxFiles` | `5` | Max rotated files to keep per day |
 | `app.log.maxDays` | `14` | Auto-delete daily logs older than this |
-| `database.connection` | `'sqlite'` | `DB_CONNECTION` env |
+| `database.driver` | `'sqlite'` | `DB_CONNECTION` env |
 | `database.database` | `'foobar.db'` | `DB_DATABASE` env |
 | `session.driver` | `'cookie'` | `SESSION_DRIVER` env |
 | `session.lifetime` | `120` (minutes) | |
@@ -93,14 +93,14 @@ The `plugins` key defines which first-party plugins to load at boot.
 
 ### `config/database.js`
 
-The `connection` key determines the database driver. Supported values:
+The `driver` key determines the database driver. Supported values:
 `sqlite`, `postgres`, `mysql`, `mongodb`.
 
 **SQLite** (default):
 
 ```js
 export default {
-  connection: process.env.DB_CONNECTION || 'sqlite',
+  driver: process.env.DB_CONNECTION || 'sqlite',
   database: process.env.DB_DATABASE || 'foobar.db',
 }
 ```
@@ -109,7 +109,7 @@ export default {
 
 ```js
 export default {
-  connection: 'postgres',
+  driver: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 5432),
   database: process.env.DB_DATABASE || 'myapp',
@@ -122,7 +122,7 @@ export default {
 
 ```js
 export default {
-  connection: 'mysql',
+  driver: 'mysql',
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 3306),
   database: process.env.DB_DATABASE || 'myapp',
@@ -132,11 +132,11 @@ export default {
 ```
 
 **Multiple connections** — add named connections under `connections`. Each
-named connection specifies its own driver via `connection`:
+named connection specifies its own `driver`:
 
 ```js
 export default {
-  connection: 'postgres',
+  driver: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 5432),
   database: process.env.DB_DATABASE || 'myapp',
@@ -145,7 +145,7 @@ export default {
 
   connections: {
     analytics: {
-      connection: 'mysql',
+      driver: 'mysql',
       host: process.env.ANALYTICS_DB_HOST || 'localhost',
       port: Number(process.env.ANALYTICS_DB_PORT || 3306),
       database: 'analytics',
@@ -153,7 +153,7 @@ export default {
       password: process.env.ANALYTICS_DB_PASSWORD || '',
     },
     logs: {
-      connection: 'sqlite',
+      driver: 'sqlite',
       database: 'logs.db',
     },
   },
