@@ -15,7 +15,7 @@ These protections are always on and require no configuration:
 | **Filename sanitization** | Admin file uploads strip directory components and special characters from filenames. |
 | **MIME magic byte validation** | File upload validation checks actual file bytes (JPEG, PNG, GIF, PDF, WebP, SVG, ZIP) — not just the client-reported Content-Type. |
 | **CSRF protection** | State-changing requests require a valid CSRF token (see [Middleware](./middleware.md)). |
-| **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. |
+| **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. Extensible via config. |
 
 ## Content Security Policy (CSP)
 
@@ -97,7 +97,18 @@ When the limit is exceeded, the server responds with `429 Too Many Requests`.
 
 ### Login rate limiter
 
-Login endpoints (`POST /login` and `POST /api/auth/token`) have a stricter rate limit: **5 attempts per minute per IP**, separate from the global limiter. This is not configurable — it's a security baseline.
+Login endpoints (`POST /login` and `POST /api/auth/token`) have a stricter rate limit: **5 attempts per minute per IP**, separate from the global limiter.
+
+Configure in `config/auth.js`:
+
+```js
+export default {
+  loginRateLimit: {
+    max: 5,            // attempts per window (default: 5)
+    windowMs: 60000,   // window size in milliseconds (default: 60000)
+  },
+}
+```
 
 ### Pluggable store
 
@@ -186,6 +197,20 @@ export default {
 ```
 
 Without an `authCallback`, all attempts to authenticate a WebSocket connection are rejected. Public channels (no `private-` or `presence-` prefix) remain open to all connected clients.
+
+## Template expression blocklist
+
+The Blade template engine uses `new Function()` to evaluate expressions like `{{ user.name }}`. To prevent code injection, a blocklist rejects expressions containing dangerous keywords: `process`, `require`, `import`, `eval`, `Function`, `globalThis`, `__proto__`.
+
+To add custom blocked keywords (e.g. for a CMS where templates come from untrusted sources), extend the blocklist in `config/views.js`:
+
+```js
+export default {
+  blockedExpressions: ['fetch', 'XMLHttpRequest', 'setTimeout', 'setInterval'],
+}
+```
+
+Custom keywords are added on top of the built-in defaults — you cannot remove the defaults.
 
 ## File upload security
 
