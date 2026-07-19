@@ -31,6 +31,11 @@ The framework ships with sensible defaults for every config key. You only need t
 | `mail.from` | `'hello@example.com'` | `MAIL_FROM` env |
 | `storage.default` | `'local'` | |
 | `storage.disks.local.root` | `'public/uploads'` | |
+| `auth.loginRateLimit.max` | `5` | Login attempts per window |
+| `auth.loginRateLimit.windowMs` | `60000` | Login rate limit window |
+| `auth.tokenAuth.maxTokensPerUser` | `5` | Max API tokens per user |
+| `auth.tokenAuth.expiry` | `null` | Default token lifetime |
+| `views.blockedExpressions` | `[]` | Extra blocked template keywords |
 
 User config files are deep-merged on top of these defaults — any value you set takes precedence.
 
@@ -210,6 +215,35 @@ export default {
 ```
 
 See [Security](./security.md) for CSP customization and rate limiting details.
+
+### `config/auth.js`
+
+```js
+export default {
+  loginRateLimit: {
+    max: 5,            // login attempts per window (default: 5)
+    windowMs: 60000,   // window in milliseconds (default: 60000)
+  },
+  tokenAuth: {
+    models: { user: 'User' },
+    defaultModel: 'user',
+    maxTokensPerUser: 5,
+    expiry: '30d',     // default: null (never expires)
+  },
+}
+```
+
+See [Authentication](./authentication.md) for token auth details and [Security](./security.md#login-rate-limiter) for rate limiting.
+
+### `config/views.js`
+
+```js
+export default {
+  blockedExpressions: ['fetch', 'XMLHttpRequest'],  // default: [] (only built-in blocklist)
+}
+```
+
+See [Security](./security.md#template-expression-blocklist) for details on expression safety.
 
 ### `config/storage.js`
 
