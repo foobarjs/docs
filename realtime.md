@@ -56,9 +56,17 @@ ws.onmessage = (event) => {
 |-------|---------|-------------|
 | `subscribe` | `{ channel: 'orders' }` | Subscribe to a channel |
 | `unsubscribe` | `{ channel: 'orders' }` | Unsubscribe from a channel |
-| `auth` | `{ userId: 1 }` | Identify the connection for targeted emits |
-| `broadcast` | `{ channel, event, data }` | Relay a broadcast through the server |
+| `auth` | `{ token: '42\|abc...' }` | Authenticate the connection with a Bearer token |
+| `broadcast` | `{ channel, event, data }` | Relay a broadcast through the server (disabled by default) |
 
 ## Channels
 
 Clients subscribe to named channels. The server emits events only to clients subscribed to that channel (or the wildcard channel `*`). When Redis broadcast is enabled, events published on one server are delivered to subscribers on all servers.
+
+### Private channels
+
+Channels prefixed with `private-` or `presence-` require the client to authenticate first (via the `auth` event) and pass the `authorizeChannel` check. Public channels (no prefix) are open to all connected clients.
+
+## Security
+
+By default, client-side `broadcast` is disabled and private channels require server-side authentication. See [Security — WebSocket security](./security.md#websocket-security) for configuration details including `authCallback`, `authorizeChannel`, and `allowClientBroadcast`.

@@ -21,7 +21,7 @@ foobar key:generate
 
 The auth plugin will throw a clear error at boot if `APP_SECRET` is missing.
 
-The plugin registers session middleware, authentication middleware, and the following routes:
+The plugin registers session middleware, authentication middleware, login rate limiting (5 attempts per minute per IP on login endpoints), and the following routes:
 
 | Method | URI | Description |
 |--------|-----|-------------|

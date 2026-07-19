@@ -195,10 +195,21 @@ export default {
 
 ```js
 export default {
-  helmet: { contentSecurityPolicy: false },
+  helmet: {
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+    },
+  },
   rateLimit: { max: 100, windowMs: 60000 },
 }
 ```
+
+See [Security](./security.md) for CSP customization and rate limiting details.
 
 ### `config/storage.js`
 

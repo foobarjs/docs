@@ -10,7 +10,7 @@ The auth plugin registers session middleware globally. Sessions are stored in HM
 - Cookie name: `foobar_session`
 - Data: JSON-encoded, base64-encoded, HMAC-SHA256 signed
 - Expiry: 7 days
-- Flags: `HttpOnly`, `SameSite=Lax`
+- Flags: `HttpOnly`, `SameSite=Lax`, `Secure` (in production)
 
 ## Using Sessions
 
@@ -111,6 +111,8 @@ export default {
   secure: false,           // true in production with HTTPS
 }
 ```
+
+The `Secure` flag is enabled automatically when `NODE_ENV=production`. Override this in `config/session.js` with the `secure` option. See [Security](./security.md#session-security) for details.
 
 ## Secret Key
 
