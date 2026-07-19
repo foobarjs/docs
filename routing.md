@@ -65,10 +65,13 @@ Any class with a `handle(c, next)` method works as middleware — pass the class
 
 ### Fluent middleware API
 
-Route methods return a chainable object with `.withoutMiddleware()` and `.middleware()`:
+Route methods return a chainable object with `.public()`, `.withoutMiddleware()`, and `.middleware()`:
 
 ```js
 import RateLimit from '../app/middlewares/RateLimit.js'
+
+// Mark a route as publicly accessible (no login required)
+router.get('/pricing', PagesController, 'pricing').public()
 
 // Opt out of auto-applied middleware
 router.post('/webhook/stripe', WebhookController, 'handle')
@@ -80,7 +83,7 @@ router.get('/dashboard', DashboardController, 'index')
   .withoutMiddleware(['Analytics'])
 ```
 
-Pass middleware names (strings, derived from filenames) or imported references.
+`.public()` is sugar for `.withoutMiddleware(['RequireAuthMiddleware'])`. Pass middleware names (strings, derived from filenames) or imported references.
 
 ### `router.resource(path, ControllerClass)`
 
@@ -164,6 +167,15 @@ router.group({ prefix: '/webhooks' }, (r) => {
 }).withoutMiddleware(['Csrf'])
 ```
 
+Groups also support `.public()`:
+
+```js
+router.group({ prefix: '/docs' }, (r) => {
+  r.get('/', DocsController, 'index')
+  r.get('/:slug', DocsController, 'show')
+}).public()
+```
+
 ## Convention routes
 
 Any controller in `app/controllers/` is auto-mounted as a REST resource at
@@ -187,6 +199,14 @@ in `routes/web.js` is equivalent and clearer.
 
 Sub-folders work: `app/controllers/admin/orders.controller.js` mounts at
 `/admin/orders`.
+
+Convention routes follow the zero-trust policy. To make a convention controller public, add `static auth = false`:
+
+```js
+class PagesController extends Controller {
+  static auth = false
+}
+```
 
 ## Route parameters
 

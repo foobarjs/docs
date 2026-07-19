@@ -16,6 +16,43 @@ These protections are always on and require no configuration:
 | **MIME magic byte validation** | File upload validation checks actual file bytes (JPEG, PNG, GIF, PDF, WebP, SVG, ZIP) — not just the client-reported Content-Type. |
 | **CSRF protection** | State-changing requests require a valid CSRF token (see [Middleware](./middleware.md)). |
 | **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. Extensible via config. |
+| **Zero-trust routing** | All routes require authentication by default. Public routes must be explicitly opted out with `.public()` or `static auth = false`. |
+
+## Zero-trust routing
+
+foobarjs follows a **zero-trust-first** policy: every route requires authentication by default. Unauthenticated requests are redirected to `/login` (or receive a `401` JSON response for API clients). Auth pages (`/login`, `/register`) are automatically exempt.
+
+To make a route public, opt out explicitly:
+
+**Per-route:**
+
+```js
+// routes/web.js
+router.get('/pricing', PagesController, 'pricing').public()
+```
+
+**Per-group:**
+
+```js
+router.group({ prefix: '/docs' }, (r) => {
+  r.get('/', DocsController, 'index')
+  r.get('/:slug', DocsController, 'show')
+}).public()
+```
+
+**Per-controller** (for convention-discovered controllers):
+
+```js
+class PagesController extends Controller {
+  static auth = false
+}
+```
+
+The existing `.withoutMiddleware(['RequireAuthMiddleware'])` also works — `.public()` is sugar for it.
+
+**API routes** use their own auth system (`static apiAuth` on models). Set `apiAuth = 'public'` on a model to make its API endpoints publicly accessible. See [API](./api.md).
+
+To revert to opt-in authentication, set `guard: 'manual'` in `config/auth.js`.
 
 ## Content Security Policy (CSP)
 

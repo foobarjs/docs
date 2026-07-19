@@ -16,6 +16,7 @@ The framework ships with sensible defaults for every config key. You only need t
 | `app.log.maxSize` | `10485760` (10 MB) | Rotate when daily log exceeds this size |
 | `app.log.maxFiles` | `5` | Max rotated files to keep per day |
 | `app.log.maxDays` | `14` | Auto-delete daily logs older than this |
+| `app.plugins` | `['foobarjs/auth', ...]` | Auth, admin, API, API docs |
 | `database.driver` | `'sqlite'` | `DB_CONNECTION` env |
 | `database.database` | `'foobar.db'` | `DB_DATABASE` env |
 | `session.driver` | `'cookie'` | `SESSION_DRIVER` env |
@@ -31,6 +32,7 @@ The framework ships with sensible defaults for every config key. You only need t
 | `mail.from` | `'hello@example.com'` | `MAIL_FROM` env |
 | `storage.default` | `'local'` | |
 | `storage.disks.local.root` | `'public/uploads'` | |
+| `auth.guard` | `'required'` | `'required'` = zero-trust; `'manual'` = opt-in auth |
 | `auth.loginRateLimit.max` | `5` | Login attempts per window |
 | `auth.loginRateLimit.windowMs` | `60000` | Login rate limit window |
 | `auth.tokenAuth.maxTokensPerUser` | `5` | Max API tokens per user |
@@ -220,6 +222,7 @@ See [Security](./security.md) for CSP customization and rate limiting details.
 
 ```js
 export default {
+  guard: 'required',   // 'required' = all routes need auth; 'manual' = opt-in
   loginRateLimit: {
     max: 5,            // login attempts per window (default: 5)
     windowMs: 60000,   // window in milliseconds (default: 60000)
@@ -233,7 +236,7 @@ export default {
 }
 ```
 
-See [Authentication](./authentication.md) for token auth details and [Security](./security.md#login-rate-limiter) for rate limiting.
+See [Security](./security.md#zero-trust-routing) for zero-trust details, [Authentication](./authentication.md) for token auth, and [Security](./security.md#login-rate-limiter) for rate limiting.
 
 ### `config/views.js`
 
