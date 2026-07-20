@@ -139,11 +139,11 @@ product.tags = [tag1, tag2]   // model instances instead of IDs
 await product.save()
 ```
 
-This applies to `$related()` methods as well — `attach()`, `detach()`, `sync()`, `toggle()`, and `associate()` all accept model instances or raw IDs.
+This applies to `related()` methods as well — `attach()`, `detach()`, `sync()`, `toggle()`, and `associate()` all accept model instances or raw IDs.
 
-## Relation Operations (`$related`)
+## Relation Operations (`related`)
 
-Use `$related('name')` on a model instance to get a relation proxy with chainable operations. This is the primary API for creating, attaching, and querying related records.
+Use `related('name')` on a model instance to get a relation proxy with chainable operations. This is the primary API for creating, attaching, and querying related records.
 
 ### BelongsTo
 
@@ -151,14 +151,14 @@ Use `$related('name')` on a model instance to get a relation proxy with chainabl
 const product = await Product.find(1)
 
 // Load the parent
-const category = await product.$related('category').get()
+const category = await product.related('category').get()
 
 // Change the parent (sets FK and saves)
 const newCategory = await Category.find(2)
-await product.$related('category').associate(newCategory)
+await product.related('category').associate(newCategory)
 
 // Remove the parent (nulls FK and saves)
-await product.$related('category').dissociate()
+await product.related('category').dissociate()
 ```
 
 ### HasMany
@@ -167,34 +167,34 @@ await product.$related('category').dissociate()
 const category = await Category.first()
 
 // Create a child with FK set automatically
-const product = await category.$related('products').create({
+const product = await category.related('products').create({
   name: 'Laptop',
   price: 999,
 })
 
 // Attach an existing instance (sets FK and saves)
 const existing = new Product({ name: 'Phone', price: 499 })
-await category.$related('products').save(existing)
+await category.related('products').save(existing)
 
 // Query related records
-const products = await category.$related('products').get()
-const first    = await category.$related('products').first()
-const count    = await category.$related('products').count()
-const exists   = await category.$related('products').exists()
+const products = await category.related('products').get()
+const first    = await category.related('products').first()
+const count    = await category.related('products').count()
+const exists   = await category.related('products').exists()
 
 // Chain query conditions
-const expensive = await category.$related('products')
+const expensive = await category.related('products')
   .where('price', '>', 500)
   .orderBy('price', 'desc')
   .limit(10)
   .get()
 
 // Find or create scoped to the parent
-const product = await category.$related('products')
+const product = await category.related('products')
   .firstOrCreate({ name: 'Tablet' }, { price: 299 })
 
 // Update or create scoped to the parent
-const product = await category.$related('products')
+const product = await category.related('products')
   .updateOrCreate({ name: 'Tablet' }, { price: 349 })
 ```
 
@@ -204,10 +204,10 @@ Same API as HasMany, but `get()` and `first()` return a single record.
 
 ```js
 const user = await User.first()
-const profile = await user.$related('profile').get()
+const profile = await user.related('profile').get()
 
 // Create if it doesn't exist
-await user.$related('profile').create({ bio: 'Hello' })
+await user.related('profile').create({ bio: 'Hello' })
 ```
 
 ### BelongsToMany
@@ -216,34 +216,34 @@ await user.$related('profile').create({ bio: 'Hello' })
 const product = await Product.find(1)
 
 // Attach pivot rows (skips duplicates)
-await product.$related('tags').attach([1, 2, 3])
-await product.$related('tags').attach(tag)          // single instance
+await product.related('tags').attach([1, 2, 3])
+await product.related('tags').attach(tag)          // single instance
 
 // Detach specific or all
-await product.$related('tags').detach([2])           // remove specific
-await product.$related('tags').detach()              // remove all
+await product.related('tags').detach([2])           // remove specific
+await product.related('tags').detach()              // remove all
 
 // Sync to an exact set (adds missing, removes extra)
-await product.$related('tags').sync([2, 3])
+await product.related('tags').sync([2, 3])
 
 // Toggle presence (attached → detached, detached → attached)
-await product.$related('tags').toggle([1, 2])
+await product.related('tags').toggle([1, 2])
 
 // Create a related record and attach in one step
-const tag = await product.$related('tags').create({ label: 'New' })
+const tag = await product.related('tags').create({ label: 'New' })
 
 // Query
-const tags   = await product.$related('tags').get()
-const count  = await product.$related('tags').count()
-const exists = await product.$related('tags').exists()
+const tags   = await product.related('tags').get()
+const count  = await product.related('tags').count()
+const exists = await product.related('tags').exists()
 
 // Chain conditions on the related model
-const redTags = await product.$related('tags')
+const redTags = await product.related('tags')
   .where('label', 'like', '%red%')
   .get()
 ```
 
-### `$related` Quick Reference
+### `related` Quick Reference
 
 | Relation | Method | Description |
 |----------|--------|-------------|

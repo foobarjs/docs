@@ -35,7 +35,7 @@ Guiding principles:
 | `app/notifications/**/*.js` | Plain userland classes — imported explicitly where dispatched. No auto-discovery. |
 | `app/serializers/<model>.serializer.js` | Auto-looked-up per request by `autoSerialize(Model, data)`. Filename must match the lowercased model class name. |
 | `app/validators/**/*.js` | Plain userland classes — imported by `FormRequest` subclasses. No auto-discovery. |
-| `app/views/**/*.html` | Rendered via `this.render('folder/file')`. Also used for the auto-render fallback. |
+| `app/views/**/*.html` | Rendered via `this.render('folder/file')`. |
 | `app/views/layouts/*.html` | Convention only. Reference from templates via `@layout('layouts/app')`. |
 | `app/views/errors/*.html` | Auto-lookup for HTTP error rendering (see [Error handling](./error-handling.md)). |
 | `app/views/auth/*.html` | Optional user overrides for the auth plugin's login/register templates. If absent, foobarjs ships a self-contained default. |
@@ -99,21 +99,8 @@ Whatever a controller action returns is coerced into a response:
 |--------------|--------------------|
 | A `Response` object | Sent as-is. |
 | `undefined` or `null` | `204 No Content`. |
-| An object or array | Looks for `app/views/<controller>/<action>.html`. If found, renders it with the value bound to a data key (see below). Otherwise returns JSON. |
+| An object or array | Returns JSON. |
 | A string or primitive | `c.text(String(value))`. |
-
-**Data key naming for the auto-render fallback:**
-
-- `index` uses the plural form (from the controller name, lowercased).
-  `ProductsController.index → {products: [...]}`.
-- `show`, `edit`, `new`, `destroy` use the singular.
-  `ProductsController.show → {product: {...}}`.
-- `store` and `update` typically redirect, so they don't hit this path.
-
-The controller name for view lookup and data key comes from the class name
-with the `Controller` suffix stripped and lowercased. `ProductsController` →
-`products`, `WidgetController` → `widget`. This is independent of the
-filename.
 
 ## Models
 
@@ -223,8 +210,7 @@ See [Validation](./validation.md).
 
 ## Views
 
-- Rendered via `this.render('folder/file', data)` or the auto-render
-  fallback from a returned object.
+- Rendered via `this.render('folder/file', data)`.
 - Template path is relative to `app/views/`, no extension. Both
   `products.index` (dotted) and `products/index` (slashed) work.
 - Extensions searched: `.html`, `.edge`, `.eta`.

@@ -86,9 +86,8 @@ class Post extends Model {
   }
 
   afterFetch() {
-    this._loaded = true
-    // Access model values via $attributes or property shorthand:
-    // this.$attributes.title or this.title
+    // Runs after a record is loaded from the database.
+    // Useful for computed properties or post-load setup.
   }
 }
 ```

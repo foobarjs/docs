@@ -254,7 +254,7 @@ class OrdersController {
   }
 }
 
-// demo/test/orders.test.js
+// test/orders.test.js
 test('missing order returns 404', async ({ request }) => {
   const res = await request.get('/orders/99999')
   assert.strictEqual(res.status, 404)

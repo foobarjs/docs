@@ -7,8 +7,9 @@ live in `app/controllers/` and are named with the `.controller.js` suffix.
 
 Every controller extends `Controller` from `foobarjs/core`. The base class
 provides response helpers (`this.render`, `this.json`, `this.redirect`, ...),
-convenience accessors (`this.getLoggedInUser()`, `this.params()`,
-`this.body()`), and the request context as `this.c`.
+convenience accessors for request data (`this.param()`, `this.query()`,
+`this.body`, `this.user`, `this.input()`, `this.bound()`), and the raw
+Hono context as `this.c`.
 
 ```js
 // app/controllers/home.controller.js
@@ -24,9 +25,9 @@ export default HomeController
 ```
 
 Controller methods do not take the context as a parameter — it's already on
-`this.c`. Access request data via `this.params()`, `this.query()`,
-`this.body()`, or drop down to `this.c.req.header('X-Custom')` when you need
-Direct access to the underlying request context.
+`this.c`. Access request data via `this.param()`, `this.query()`,
+`this.body`, or drop down to `this.c` when you need
+direct access to the underlying Hono context.
 
 ## Response helpers
 
@@ -49,17 +50,21 @@ Direct access to the underlying request context.
 
 | Accessor | What it returns |
 |----------|-----------------|
-| `this.c` | Request context. Drop down here for anything the helpers don't cover. |
-| `this.request` | Alias for `this.c.req`. |
-| `this.response` | Alias for `this.c.res`. |
-| `this.params()` | Route parameters (`{ id: '5' }`). |
-| `this.query()` | Query string (`{ page: '2' }`). |
-| `this.body()` | Parsed request body. Tries JSON first, then form-encoded. |
-| `this.getLoggedInUser()` | The authenticated user, or `null`. |
-| `this.isLoggedIn()` | Boolean. |
+| `this.param(name)` | A single route parameter. `this.param()` returns all. |
+| `this.query(name)` | A single query string value. `this.query()` returns all. |
+| `this.header(name)` | A request header value. |
+| `this.body` | Parsed request body (sync). JSON or form data, auto-detected. Malformed JSON returns `400` automatically with `{ error: 'Invalid JSON in request body' }`. |
+| `this.input(name)` | A single field from the body. `this.input()` returns all. |
+| `this.only('name', 'email')` | A subset of body fields. |
+| `this.file(name)` | An uploaded file from a multipart request. |
+| `this.user` | The authenticated user, or `null`. |
+| `this.bound(name)` | A route-model-bound instance. See [Routing](./routing.md). |
+| `this.getLoggedInUser()` | Alias for `this.user` (backward compat). |
+| `this.isLoggedIn()` | Boolean — whether a user is authenticated. |
 | `this.validate(FormRequestClass)` | Runs the given `FormRequest`, returns it. |
 | `this.config(key, default)` | Read a config value by dot-notation (e.g. `'app.name'`). |
 | `this.env(key, default)` | Read an environment variable from `process.env`. |
+| `this.c` | Raw Hono context. Escape hatch for anything the helpers don't cover. |
 
 ## Controller Middleware
 
@@ -75,7 +80,7 @@ class DashboardController extends Controller {
   static middleware = [RequireAuthMiddleware]
 
   async index() {
-    return this.render('dashboard/index', { user: this.getLoggedInUser() })
+    return this.render('dashboard/index', { user: this.user })
   }
 }
 ```
@@ -160,39 +165,6 @@ export default class AdminOnlyMiddleware {
 
 Pass the class itself — foobarjs instantiates it automatically. You can also pass an already-instantiated object if you need constructor arguments.
 
-## Convention-based views
-
-If a controller action returns data (not a `Response`), foobarjs looks for a
-matching view template and renders it. Fallback is JSON.
-
-| Action | View path | Data key |
-|--------|-----------|----------|
-| `index` | `app/views/<controller>/index.html` | plural (`products`) |
-| `show` | `app/views/<controller>/show.html` | singular (`product`) |
-| `edit` | `app/views/<controller>/edit.html` | singular |
-| `new` | `app/views/<controller>/new.html` | singular |
-| `destroy` | — | typically redirects |
-| `store`, `update` | — | typically redirect |
-
-Example:
-
-```js
-class ProductsController extends Controller {
-  async index() {
-    return Product.all()
-  }
-
-  async show() {
-    return Product.find(this.params().id)
-  }
-}
-```
-
-Automatically renders `products/index.html` with `{ products }` and
-`products/show.html` with `{ product }` if those views exist, otherwise
-returns JSON. This makes the same controller action serve HTML browsers
-and API clients from one implementation.
-
 ## Auto response contract
 
 The value returned from a controller action is coerced into an HTTP response
@@ -202,7 +174,7 @@ by the framework:
 |--------------|--------------------|
 | A `Response` object | Sent as-is. |
 | `undefined` or `null` | `204 No Content`. |
-| An object or array | Looks for `app/views/<controller>/<action>.html`. If found, renders it with the value bound to a data key (see mapping above). Otherwise returns JSON. |
+| An object or array | Returns JSON (`c.json(value)`). |
 | A string or primitive | Sent as plain text (`c.text(String(value))`). |
 
 The `<controller>` folder name is derived from the class name with the
@@ -229,11 +201,11 @@ or from an explicit registration in `routes/web.js`. See [Routing](./routing.md)
 
 ## Working with the raw context
 
-For anything the helpers don't cover, use `this.c` directly:
+For response headers or anything the helpers don't cover, use `this.c` directly:
 
 ```js
 async show() {
-  const ifNoneMatch = this.c.req.header('If-None-Match')
+  const ifNoneMatch = this.header('If-None-Match')
   const url = new URL(this.c.req.url)
   this.c.header('Cache-Control', 'max-age=60')
   return this.render('products/show', { product })

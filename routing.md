@@ -85,6 +85,59 @@ router.get('/dashboard', DashboardController, 'index')
 
 `.public()` is sugar for `.withoutMiddleware(['RequireAuthMiddleware'])`. Pass middleware names (strings, derived from filenames) or imported references.
 
+### Route model binding
+
+Use `.bind()` to automatically resolve a Model from a route parameter. The param name matches the model name (lowercase):
+
+```js
+import Order from '../app/models/order.model.js'
+
+// :order param → Order.find(paramValue)
+router.put('/orders/:order/refund', OrderController, 'refund')
+  .bind(Order)
+```
+
+The resolved instance is available via `c.req.bound('order')` in closures or `this.bound('order')` in controllers. If the record isn't found, a `404 Not Found` is thrown automatically.
+
+For `router.resource()`, pass the Model as the third argument to auto-bind on detail routes:
+
+```js
+router.resource('/orders', OrderController, Order)
+```
+
+Convention controllers can declare `static model` to auto-bind:
+
+```js
+class OrderController extends Controller {
+  static model = Order
+
+  async show() {
+    const order = this.bound('order')  // already loaded
+  }
+}
+```
+
+### Gate authorization
+
+Use `.can()` to require gate authorization on a route:
+
+```js
+router.get('/dashboard', DashboardController, 'index')
+  .can('view', 'analytics')
+```
+
+Combine `.bind()` with `.can()` for per-item authorization — the gate receives the bound model instance:
+
+```js
+router.put('/orders/:order/refund', OrderController, 'refund')
+  .bind(Order)
+  .can('refund', Order)
+```
+
+Without `.bind()`, the gate only has the user (useful for user-level checks like standalone gates). With `.bind()`, the gate gets the loaded record for per-item checks.
+
+> **Note:** `.can()` requires an authenticated user. If the request has no user (e.g. on a `.public()` route), foobarjs throws an `AuthenticationError` (HTTP 401).
+
 ### `router.resource(path, ControllerClass)`
 
 Registers up to seven routes, but only for actions the controller actually
@@ -99,6 +152,12 @@ defines. Missing methods produce no route.
 | GET | `/base/:id/edit` | `edit` |
 | PUT | `/base/:id` | `update` |
 | DELETE | `/base/:id` | `destroy` |
+
+Pass a Model class as the third argument to auto-bind on detail routes (`:id`):
+
+```js
+router.resource('/orders', OrderController, Order)
+```
 
 Also available: `routes/api.js`, loaded the same way. Convention is to use it
 for JSON API routes, e.g. `router.get('/api/v1/status', ...)`, but the file
@@ -210,11 +269,11 @@ class PagesController extends Controller {
 
 ## Route parameters
 
-Access via `this.params()` (Controller) or `c.req.param('name')`:
+Access via `this.param('name')` (Controller) or `c.req.param('name')` (closure):
 
 ```js
 async show() {
-  const id = this.params().id
+  const id = this.param('id')
   const product = await Product.find(id)
   return this.render('products/show', { product })
 }

@@ -35,17 +35,13 @@ router.get('/pricing', (c) => c.render('marketing/pricing', { plans }))
 `c.render(template, data)` is the underlying primitive — `this.render()` is a
 thin wrapper around it.
 
-## Convention-based rendering
+## Rendering views
 
-If a controller action returns data instead of a `Response`, foobarjs looks
-for a matching view and renders it automatically.
+Views must be explicitly rendered from a controller action via `this.render()`.
+Returning a plain object from a controller action always returns JSON — there
+is no automatic view lookup.
 
-`ProductsController.show` returning a single product → looks for
-`app/views/products/show.jsx` (or `.html`) and renders it with `{ product }`.
-
-If no matching view exists, the data becomes JSON.
-
-See [Controllers](./controllers.md#convention-based-views) for the full mapping.
+See [Controllers](./controllers.md) for the auto response contract.
 
 ## JSX views
 

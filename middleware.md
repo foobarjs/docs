@@ -341,7 +341,7 @@ The `Controller` base class wraps `c` with convenience methods so you rarely nee
 | `this.flash(key, message)` | `c.get('session').flash(key, message)` |
 | `this.params()` | `c.req.param()` |
 | `this.query()` | `c.req.query()` |
-| `this.body()` | Parsed request body (JSON or form) |
+| `this.body` | Parsed request body (JSON or form) |
 | `this.config(key)` | `c.get('configLoader').get(key)` |
 | `this.validate(Class)` | `c.validate(Class)` |
 

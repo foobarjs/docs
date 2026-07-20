@@ -79,6 +79,18 @@ foobar routes
 foobar routes --json     # machine-readable output
 ```
 
+### `foobar inspect:routes`
+
+List routes with auth and gate details:
+
+```bash
+foobar inspect:routes
+foobar inspect:routes --json     # machine-readable output
+foobar inspect:routes --strict   # exit non-zero if authenticated routes lack a gate
+```
+
+The `--strict` flag is useful in CI to ensure all authenticated routes have gate authorization.
+
 ### `foobar repl`
 
 Start an interactive console with the booted application:
@@ -182,9 +194,10 @@ foobar g test Product
 foobar g seeder products
 foobar g command sync:inventory
 foobar g admin Product
+foobar g gate Order
 ```
 
-Available types: `controller`, `model`, `scaffold`, `view`, `serializer`, `validator`, `job`, `event`, `listener`, `middleware`, `test`, `seeder`, `command`, `admin`.
+Available types: `controller`, `model`, `scaffold`, `view`, `serializer`, `validator`, `job`, `event`, `listener`, `middleware`, `test`, `seeder`, `command`, `admin`, `gate`.
 
 ---
 

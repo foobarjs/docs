@@ -1130,15 +1130,6 @@ export default Admin.resource(SystemLog)
 - No eager loading or relations between custom and DB-backed models.
 - `$list()` returns pre-paginated data — the admin passes filter/sort/search params for the implementation to handle.
 
-## Demo Application
-
-The included demo application (`demo/`) now uses the fluent API. See:
-
-- `demo/app/admin/product.admin.js` — products with money columns, boolean badges, and searchable filters
-- `demo/app/admin/order.admin.js` — orders with ExportAction, CRUD hooks, status badges, form sections, and dashboard widgets
-- `demo/app/admin/system-log.admin.js` — CustomModel with in-memory data source
-- `demo/app/models/system-log.model.js` — CustomModel implementation with `$list`, `$find`, `$create`, `$update`, `$delete`
-
 ## Theme and Branding
 
 Configure the admin theme in `config/admin.js`:

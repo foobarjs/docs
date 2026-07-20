@@ -88,6 +88,8 @@ Resolution precedence (most specific wins):
 The gate **fails closed**: if `foobarjs/auth` is not registered there is never a
 current user, so every non-public rule rejects with `401`.
 
+> **Zero-trust gates:** Authenticated API models must have a registered gate. If no gate exists for an authenticated model, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks.
+
 ```js
 // Per-model override on the model itself
 class AuditLog extends Model {

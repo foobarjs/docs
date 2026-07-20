@@ -17,6 +17,7 @@ These protections are always on and require no configuration:
 | **CSRF protection** | State-changing requests require a valid CSRF token (see [Middleware](./middleware.md)). |
 | **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. Extensible via config. |
 | **Zero-trust routing** | All routes require authentication by default. Public routes must be explicitly opted out with `.public()` or `static auth = false`. |
+| **Gate authorization** | Gates check per-action, per-resource authorization across admin, API, and web routes. See [Authorization](./authorization.md). |
 
 ## Zero-trust routing
 

@@ -404,7 +404,7 @@ const products = await Product.query().with('category').get()
 | `hasOne` | Supported | Same as hasMany, returns first match |
 | `belongsToMany` | Not supported | Pivot table must live on one connection; cannot span two databases |
 
-> **Warning:** `belongsToMany` (many-to-many) requires a pivot table. Since the pivot table can only exist on one database, both models and the pivot table must share the same connection. Declaring a `belongsToMany` across connections will silently fail when the pivot table is not found.
+> **Warning:** `belongsToMany` (many-to-many) requires a pivot table. Since the pivot table can only exist on one database, both models and the pivot table must share the same connection. Declaring a `belongsToMany` across connections will throw an error if the pivot table is not found. Other SQL errors (constraint violations, duplicates) also propagate -- they are no longer silently swallowed.
 
 ### Transactions
 
