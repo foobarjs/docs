@@ -5,6 +5,12 @@
 Documentation for the [foobarjs](https://github.com/foobarjs/foobarjs)
 framework — a batteries-included Node.js MVC framework.
 
+> 👋 **New here?** Start with the **[30-minute tutorial](./tutorial.md)** —
+> scaffold an app, add a model, and see the auto-admin + auto-API light up.
+> Come back to the reference when you want to look something up.
+
+---
+
 ## Philosophy
 
 foobarjs is opinionated so you can focus on building.
@@ -26,70 +32,72 @@ foobarjs is opinionated so you can focus on building.
 
 ![Define a model — foobarjs auto-generates an admin panel and REST API endpoints](./assets/model-to-admin-api.svg)
 
-## Getting started
+---
 
-- [Installation](./installation.md)
-- [Directory structure](./directory-structure.md)
-- [Conventions](./conventions.md)
-- [Configuration](./configuration.md)
-- [Lifecycle](./lifecycle.md)
-- [CLI](./cli.md)
+## 🚀 Start here
 
-## HTTP
+Walkthroughs and setup for someone new to the framework.
 
-- [Routing](./routing.md)
-- [Controllers](./controllers.md)
-- [Views](./views.md)
-- [Session](./session.md)
-- [Error handling](./error-handling.md)
-- [Logging](./logging.md)
+- **[Tutorial: build a foobarjs app in 30 minutes](./tutorial.md)** — recommended first read
+- [Installation](./installation.md) — Node 20+, `foobar new`, environment
+- [Directory structure](./directory-structure.md) — where each thing lives
+- [Conventions](./conventions.md) — the naming rules that make auto-discovery work
+- [Configuration](./configuration.md) — `config/*.js` and env
+- [CLI](./cli.md) — every `foobar` command
 
-## Data
+## 🛠 How-to guides
 
-- [ORM: getting started](./orm/getting-started.md)
-- [ORM: relationships](./orm/relationships.md)
-- [Database migrations](./database/migrations.md)
-- [Database seeding](./database/seeding.md)
-- [Validation](./validation.md)
-- [Serialization](./serialization.md)
+Task-oriented recipes — "how do I…" answered in one focused page each.
 
-## Auth & Security
+- [Recipes](./recipes.md) — the current mixed-bag; being reorganized as Q&A
+- [Troubleshooting](./troubleshooting.md) — common errors, first-time gotchas
 
-- [Authentication](./authentication.md)
-- [Authorization](./authorization.md)
-- [Middleware](./middleware.md)
-- [Security](./security.md)
+## 📖 Reference
 
-## Admin & API
+Look up what a subsystem does and how to call it.
 
-- [Admin panel](./admin-panel.md)
-- [API](./api.md)
-- [Helpers](./helpers.md)
+**HTTP**
+- [Routing](./routing.md) · [Controllers](./controllers.md) · [Views](./views.md)
+- [Session](./session.md) · [Error handling](./error-handling.md) · [Logging](./logging.md)
+- [Middleware](./middleware.md) · [Security](./security.md)
 
-## Async
+**Data**
+- [ORM query reference](./orm/getting-started.md) · [Relationships](./orm/relationships.md)
+- [Migrations](./database/migrations.md) · [Seeding](./database/seeding.md)
+- [Validation](./validation.md) · [Serialization](./serialization.md)
 
-- [Queues](./queues.md)
-- [Cache](./cache.md)
-- [Redis](./redis.md)
-- [Events](./events.md)
-- [Realtime](./realtime.md)
-- [Mail](./mail.md)
-- [Notifications](./notifications.md)
-- [Storage](./storage.md)
+**Auth**
+- [Authentication](./authentication.md) · [Authorization](./authorization.md)
 
-## Testing
+**Admin & API**
+- [Admin panel](./admin-panel.md) · [API](./api.md) · [Helpers](./helpers.md)
 
+**Async & I/O**
+- [Queues](./queues.md) · [Cache](./cache.md) · [Redis](./redis.md)
+- [Events](./events.md) · [Realtime](./realtime.md)
+- [Mail](./mail.md) · [Notifications](./notifications.md) · [Storage](./storage.md)
+
+**Testing**
 - [Testing](./testing.md)
 
-## Recipes & Troubleshooting
+## 💡 Explanation
 
-- [Recipes](./recipes.md)
-- [Troubleshooting](./troubleshooting.md)
+Design context — why the framework is shaped the way it is. Read these when
+something surprises you or when you want a mental model before diving in.
+
+- [Lifecycle](./lifecycle.md) — how a request flows from boot to response
+- [AGENTS.md](./AGENTS.md) — architecture notes for contributors and agents
+- **Design decisions** (worth writing up soon; live in CHANGELOG for now):
+  - *Why explicit routes suppress convention* — see `routing.md` "Explicit routes override conventions"
+  - *Resource declaration IS the authorization* — see `admin-panel.md`
+  - *Auto-coercion + transforms in FormRequest* — see `validation.md`
+
+---
 
 ## Related
 
 - Framework source: [foobarjs/foobarjs](https://github.com/foobarjs/foobarjs)
-- Reference application: [foobarjs/demo](https://github.com/foobarjs/demo)
+- Reference application: [foobarjs/demo](https://github.com/foobarjs/demo) — a full event platform exercising every subsystem
 
 ## License
 
