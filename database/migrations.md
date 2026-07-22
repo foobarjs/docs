@@ -11,6 +11,11 @@ prototyping. It reads your model definitions and applies the diff directly,
 no files involved. Use it while sketching; use migrations when the schema
 starts to matter.
 
+> **New here?** Read [Database workflow](./workflow.md) first — it
+> explains *when* to use `db:sync` vs `db:make`/`db:migrate`, how the
+> mode switches automatically, and how the multi-team story works.
+> This page is the command reference.
+
 ## The commands
 
 | Command | What it does |
@@ -342,8 +347,45 @@ export default {
 Commit the file. `foobar db:migrate` applies it in order alongside your
 structural migrations.
 
+## The schema snapshot file
+
+Two commands rely on a snapshot file at `database/.foobar-schema.json`:
+
+- `foobar db:make` — diffs current models against the snapshot to
+  generate the migration body.
+- `foobar db:sync` — same diff, applied directly instead of written to
+  a file. On success, refreshes the snapshot.
+
+`foobar db:migrate` also refreshes the snapshot on success, so the next
+`db:make` starts from the applied state.
+
+**Commit `database/.foobar-schema.json` to git.** Without it, a fresh
+checkout has no diff baseline and `db:make` will propose to create
+tables that already exist. `foobar new` writes an initial snapshot for
+you.
+
+## Safety guarantees
+
+The framework refuses to shoot you in the foot without you explicitly
+overriding:
+
+- **`db:sync` refuses on destructive changes** — dropping a table,
+  dropping a column, changing a column's type, or dropping an index.
+  Prints the specific ops that would happen and points at
+  `foobar db:make`. Override with `--force`.
+- **`db:sync` refuses in production** (`NODE_ENV=production`), full
+  stop. Override with `--force`, but you shouldn't — use `db:migrate`.
+- **Auto-sync never drops.** Boot-time `schema.update({dropTables:false})`
+  is additive-only. Removing a field from a model leaves the DB column
+  in place until you explicitly `db:sync --force` or write a migration.
+- **`db:make` comments out destructive ops** unless you pass
+  `--allow-destructive`. The file is still generated; you review and
+  uncomment.
+
 ## See also
 
+- [Database workflow](./workflow.md) — mental model, multi-team story,
+  PR review checklist, rollback semantics
 - [CLI](./../cli.md)
 - [ORM: getting started](./../orm/getting-started.md)
 - [Conventions](./../conventions.md)
