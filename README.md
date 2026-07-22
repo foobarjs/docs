@@ -1,6 +1,6 @@
 # foobarjs documentation
 
-> **Experimental — not production ready.** foobarjs is under active development (v0.3.0). APIs, conventions, and database schemas may change between releases without a migration path. Use it for prototyping, learning, and side projects. Do not deploy to production yet.
+> **Experimental — not production ready.** foobarjs is under active development (v0.3.1). APIs, conventions, and database schemas may change between releases without a migration path. Use it for prototyping, learning, and side projects. Do not deploy to production yet.
 
 Documentation for the [foobarjs](https://github.com/foobarjs/foobarjs)
 framework — a batteries-included Node.js MVC framework.
@@ -21,8 +21,9 @@ foobarjs is opinionated so you can focus on building.
 - **Conventions over configuration.** File in the right folder, named the
   right way, gets picked up. Controllers, models, admin resources,
   listeners, jobs, and validators all auto-discover.
-- **Zero build step.** Strict ESM, Node 20+, no transpiler, no bundler,
-  no `dist/` directory. Source is what runs.
+- **Zero build step.** Strict ESM, Node 20+, no bundler, no `dist/`
+  directory. Source is what's on disk — JSX/TSX views are transformed
+  on-import by esbuild via a Node module loader hook.
 - **One package on npm.** Install `foobarjs`. Sub-paths (`foobarjs/orm`,
   `foobarjs/auth`, ...) are subpath exports of the same package.
 - **Escape hatches everywhere.** `foobar.app` exposes the underlying HTTP

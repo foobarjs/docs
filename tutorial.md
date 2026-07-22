@@ -28,7 +28,7 @@ Reading time: ~30 minutes.
 Run:
 
 ```bash
-npm install -g github:foobarjs/foobarjs#v0.3.0
+npm install -g github:foobarjs/foobarjs#v0.3.1
 foobar new links-app
 ```
 

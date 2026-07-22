@@ -257,6 +257,11 @@ download links, no database table needed. The signature binds a set of
 query parameters and an expiry to the URL; verification detects tampering
 and expiry in one call.
 
+Most apps should reach for the `Url` façade below — `Url.signed()` /
+`Url.signedRoute()` handle the origin, config, and secret for you. Drop
+down to `SignedUrl` directly only when you need to sign against a
+different secret or an external origin.
+
 ```js
 import { SignedUrl } from 'foobarjs/core'
 
@@ -280,20 +285,22 @@ if (expired) return renderExpiredMessage()
 - Timing-safe HMAC compare.
 - Not single-use — the link is valid until `exp` regardless of how many times it's opened. If you need single-use tokens, back them with a nonce table.
 
-Typical wiring in a controller:
+Typical wiring in a controller (via the `Url` façade):
 
 ```js
+import { Url } from 'foobarjs/core'
+
 async send() {
-  const email = this.body.email.toLowerCase()
-  const base = `${new URL(this.c.req.url).origin}/tickets/verify`
-  const link = SignedUrl.sign(base, { email }, this._secret(), { expiresIn: 30 * 60 })
+  // FormRequest with Field.string().email().lowercase() already trimmed
+  // and lowercased `email` for us.
+  const { email } = this.validated()
+  const link = Url.signed('/tickets/verify', { email }, { ttl: 30 * 60 })
   await Mailer.to(email).subject('Your link').text(link).send()
   return this.render('sent')
 }
 
 async verify() {
-  const { valid, expired, params } = SignedUrl.verify(this.c.req.url, this._secret())
-  if (!valid) return this.redirect('/tickets')
+  if (!Url.hasValidSignature(this.c)) return this.redirect('/tickets')
   // ...
 }
 ```

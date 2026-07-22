@@ -201,9 +201,13 @@ The native `better-sqlite3` binary was compiled against a different Node
 version than the one running your app. Rebuild against your active Node:
 
 ```bash
-cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3
+cd "$(node -p 'path.dirname(require.resolve("better-sqlite3/package.json"))')"
 npm run build-release
 ```
+
+(This resolves the correct path regardless of package manager — npm/yarn
+put it at `node_modules/better-sqlite3`, pnpm at
+`node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3`.)
 
 If you switch between Node versions (Volta, nvm, Herd), keep the terminal
 where you rebuild on the same version as the terminal where you run

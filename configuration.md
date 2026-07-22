@@ -39,7 +39,6 @@ The framework ships with sensible defaults for every config key. You only need t
 | `auth.loginRateLimit.windowMs` | `60000` | Login rate limit window |
 | `auth.tokenAuth.maxTokensPerUser` | `5` | Max API tokens per user |
 | `auth.tokenAuth.expiry` | `null` | Default token lifetime |
-| `views.blockedExpressions` | `[]` | Extra blocked template keywords |
 
 User config files are deep-merged on top of these defaults — any value you set takes precedence.
 
@@ -239,16 +238,6 @@ export default {
 ```
 
 See [Security](./security.md#route-authentication-defaults) for auth defaults, [Authentication](./authentication.md) for token auth, and [Security](./security.md#login-rate-limiter) for rate limiting.
-
-### `config/views.js`
-
-```js
-export default {
-  blockedExpressions: ['fetch', 'XMLHttpRequest'],  // default: [] (only built-in blocklist)
-}
-```
-
-See [Security](./security.md#template-expression-blocklist) for details on expression safety.
 
 ### `config/storage.js`
 
