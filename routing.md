@@ -379,6 +379,63 @@ Uri.current(c)
   .toString()
 ```
 
+## Named routes
+
+Every route can carry a name. Names are lookup keys — `Url.route('events.show', { id })`
+builds a URL for the route without hard-coding the path — which means you can
+rename `/events` to `/rentals` in one place and the whole app follows.
+
+```js
+router.get('/events/:id', EventsController, 'show').name('events.show')
+
+// Later, in a controller or view:
+Url.route('events.show', { id: event.id })
+// → "https://app.example/events/42"
+```
+
+Duplicate names are non-fatal: the later `.name()` call wins and a warning is
+logged. Unknown names throw with a Levenshtein-nearest suggestion list, so a
+typo like `evens.show` surfaces immediately at request time.
+
+### Auto-naming
+
+You rarely need to call `.name()` yourself — the framework names routes for
+you following a consistent convention:
+
+| Registration | Name pattern | Example |
+|---|---|---|
+| `router.resource('/events', Ctrl)` | `events.<verb>` | `events.show` |
+| `router.resource('/organizer/events', Ctrl)` | `organizer.events.<verb>` | `organizer.events.index` |
+| Convention route (`app/controllers/events.controller.js`) | same as `resource()` | `events.index` |
+| Convention route (`app/controllers/organizer/events.controller.js`) | dot-joined path segments | `organizer.events.index` |
+| Admin resource (`AdminRouter`) | `admin.<table>.<verb>` | `admin.users.edit` |
+| Admin custom actions | `admin.<table>.action` | `admin.users.action` |
+| API plugin (`ApiPlugin`) | `api.<resource>.<verb>` | `api.users.index` |
+
+`<verb>` is one of `index`, `new`, `store`, `show`, `edit`, `update`, `destroy`
+(plus `bulk`, `lookup`, `export`, `restore`, etc. for admin).
+
+To override the derived name for an entire resource:
+
+```js
+// Option A — per-registration:
+router.resource('/rentals', RentalsController, RentalModel, 'events')
+// → 'events.index', 'events.show', ...
+
+// Option B — on the controller (for convention routes too):
+class RentalsController {
+  static routeName = 'events'
+  // ...
+}
+```
+
+### Introspection
+
+```js
+router.namedRoutes()
+// → Map<string, { name, method, path, route }>
+```
+
 ## Next steps
 
 - Write the controllers your routes point at: [Controllers](./controllers.md)

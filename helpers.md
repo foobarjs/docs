@@ -300,6 +300,67 @@ async verify() {
 
 ---
 
+## Url (`foobarjs/core`)
+
+Laravel-style URL builder — a thin façade over the [Uri](./routing.md#building-urls--the-uri-helper)
+fluent builder (for query manipulation) and [SignedUrl](#signedurl-foobarjscore)
+(for HMAC signing). Use it whenever you need an *absolute* URL, a URL for a
+*named route*, a safe "back" URL, or a signed URL.
+
+```js
+import { Url, url } from 'foobarjs/core'
+```
+
+### API
+
+| Method | Purpose |
+|--------|---------|
+| `Url.to(path, params?, opts?)` | Build a URL. Fills `:param` placeholders, appends leftovers as query. `opts.absolute=false` returns path+query; `opts.secure=true` forces https. |
+| `url(path, params?, opts?)` | Top-level shorthand for `Url.to()`. |
+| `Url.current(c)` | Path + query of the current request. |
+| `Url.full(c)` | Absolute URL of the current request. |
+| `Url.previous(c, fallback='/')` | Referer if same-origin; else `fallback`. Cross-origin Referers are never returned. |
+| `Url.route(name, params?, opts?)` | Look up a [named route](./routing.md#named-routes); throws with suggestions if unknown. |
+| `Url.signed(path, params?, opts?)` | Sign a raw path. `opts.ttl` is seconds. |
+| `Url.signedRoute(name, params?, opts?)` | Sign a named route. |
+| `Url.temporarySignedRoute(name, params?, ttlSeconds)` | Convenience form of `signedRoute`. |
+| `Url.hasValidSignature(c)` | Verify the current request's signature. |
+| `Url.of(input)` | Escape hatch — returns a fluent `Uri` instance. |
+
+### Examples
+
+```js
+// Absolute URL from config('app.url')
+Url.to('/events')
+// → "https://app.example/events"
+
+// Fill placeholders and append leftovers as query
+Url.to('/events/:id/edit', { id: 42, sort: 'name' })
+// → "https://app.example/events/42/edit?sort=name"
+
+// Relative form (path + query only)
+Url.to('/events', { page: 2 }, { absolute: false })
+// → "/events?page=2"
+
+// Named route lookup
+Url.route('events.show', { id: 42 })
+// → "https://app.example/events/42"
+
+// Safe "back" URL — same-origin Referer or fallback
+return c.redirect(Url.previous(c, '/dashboard'))
+
+// Signed magic-link — 15-minute TTL
+const link = Url.signed('/tickets/verify', { email }, { ttl: 15 * 60 })
+```
+
+The `app.url` host is read from `config('app.url')`, then `process.env.APP_URL`,
+then falls back to `http://localhost:3000` (so unit tests can exercise `Url`
+without a full application boot). For fluent query manipulation (sortable
+tables, filter chips) drop to [`Uri`](./routing.md#building-urls--the-uri-helper);
+for the low-level signing primitive, see [`SignedUrl`](#signedurl-foobarjscore).
+
+---
+
 ## Dates (dayjs)
 
 foobarjs includes [dayjs](https://day.js.org/) as a first-class date library, pre-configured with `relativeTime` and `utc` plugins.
