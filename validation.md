@@ -145,6 +145,68 @@ decides how to respond. Use `this.back().withErrors(err)` for HTML forms and
 `this.json()` for APIs. See [Controllers — Redirect Builder](./controllers.md#redirect-builder)
 for the full builder API.
 
+## Coercion
+
+When validation passes, `request.validated()` returns a **coerced** copy of the
+payload — values are converted to the type declared on the `Field`. Raw form
+bodies always arrive as strings; coercion means your controllers work with
+the types you actually declared.
+
+| Field                        | Coercion                                                             |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `Field.number()`             | `Number(value)` (skips coercion on `NaN`)                            |
+| `Field.integer()` / `.number().integer()` | `Number(value)` (validation asserts integer separately) |
+| `Field.float()`              | `parseFloat(value)`                                                  |
+| `Field.decimal()`            | `Number(value)`                                                      |
+| `Field.boolean()`            | truthy: `true, 'true', '1', 'on', 'yes'` (case-insensitive) — falsy: `false, 'false', '0', '', 'no', null, undefined` |
+| `Field.date()` / `.datetime()` | `new Date(value)` — if invalid, left as-is (validation caught it) |
+| `Field.json()`               | `JSON.parse(value)` if the value is a string                         |
+| `Field.string()` / `.text()` | `String(value)`, then transforms                                     |
+| `Field.file()` / `.image()`  | pass through                                                         |
+| `Field.belongsTo(...)`       | numeric strings coerce to `Number`                                   |
+
+Coercion runs **only after validation passes**. `validated()` caches its
+result, so it's safe to call repeatedly.
+
+### Transforms
+
+Chain transform modifiers on any Field. Transforms run **after** coercion, in
+this fixed order:
+
+1. `.trim()` (strings only) — default-on for `Field.string()` / `Field.text()`
+2. `.emptyToNull()` — converts empty string (post-trim) to `null`
+3. `.strip()` — removes HTML tags (`value.replace(/<[^>]*>/g, '')`)
+4. `.lowercase()` / `.uppercase()` — case-conversion (last one chained wins)
+5. `.transform(fn)` — arbitrary function, receives the value, returns anything
+
+```js
+rules() {
+  return {
+    email: Field.string().email().lowercase().required(),
+    bio:   Field.string().strip().maxLength(500),
+    slug:  Field.string().trim().lowercase().regex(/^[a-z0-9-]+$/),
+    nick:  Field.string().emptyToNull(),
+  }
+}
+```
+
+Note that `.email()` validates the **raw** input (so `Foo@X.com` is accepted);
+the `.lowercase()` transform runs after validation, so `validated().email`
+returns `foo@x.com`.
+
+### Escape hatches
+
+- `Field.string().raw()` — disable **all** coercion and transforms for this
+  field. Use for content where whitespace / case matter (Base64 blobs,
+  signature strings, etc.).
+- `Field.string().noTrim()` — keep the default coercion, opt out of trim only.
+- `config('validation.autoCoerce', false)` — disables the feature globally;
+  `validated()` returns the raw parsed body (pre-0.2.19 behavior).
+- `config('validation.trimStrings', false)` — disables the default string
+  trim; per-field `.trim()` still works.
+- `config('validation.emptyToNull', true)` — applies `.emptyToNull()` to every
+  string field by default; per-field `.emptyToNull()` still works.
+
 ## Accessing Errors in Views
 
 Two globals are injected on every render:

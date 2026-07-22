@@ -162,6 +162,26 @@ Without explicit `form.fields`, the form includes all non-reserved column fields
 
 Relations (`belongsTo`, `belongsToMany`) are always included regardless of `fillable`/`guarded`, since they're set via foreign keys rather than mass assignment.
 
+### Resource declaration is the authorization (0.2.19+)
+
+Fields declared on the resource — via `form.fields` **or** any
+`form.sections[*].fields` — are the exact set that may land on `store` and
+`update`. The admin writes with a resource-scoped `forceFill`, so:
+
+- Model-guarded fields (`roles`, `isAdmin`, `password`, …) **do land** when the
+  resource lists them. The resource declaration is the authorization; the
+  model's `guarded` list applies to untrusted mass assignment paths (`fill()`,
+  `Model.create(untrustedBody)`), not to fields the admin operator has
+  explicitly exposed on a form.
+- Extra keys that appear in the POST body but are **not declared** on the
+  resource are silently dropped — even if they are otherwise fillable on the
+  model. This protects the admin from field-injection surprises when a form
+  evolves.
+
+If you use `form.sections`, list every writable field inside a section (or
+in `form.fields`). Fields only referenced by `detail` config are not treated
+as writable.
+
 ### Framework-managed fields
 
 `id`, `createdAt`, `updatedAt`, and `deletedAt` are managed by the framework:
