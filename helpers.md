@@ -34,6 +34,8 @@ Str.pascal('user_name')      // 'UserName'
 Str.snake('userName')        // 'user_name'
 Str.kebab('userName')        // 'user-name'
 Str.title('hello world')     // 'Hello World'
+Str.lower('HELLO')           // 'hello'  (null-safe: null/undefined → '')
+Str.upper('hello')           // 'HELLO'  (null-safe: null/undefined → '')
 ```
 
 ### Inflection
