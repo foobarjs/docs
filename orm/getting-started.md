@@ -1164,6 +1164,67 @@ await Category.query().withExists('products').get()
 
 All `withCount`/`withSum`/... use a single `GROUP BY` query per relation, so a list of 500 categories with a `withSum('products', 'price')` is 2 queries total: 1 for the categories, 1 for the sums.
 
+### Constraint callbacks
+
+Every relation-aggregate accepts an optional callback that narrows which
+related rows contribute. The callback receives a query builder with the
+same surface as `.with()` callbacks — `.where`, `.whereIn`, `.whereNull`,
+`.whereNotNull`, `.orWhere`, etc.
+
+```js
+// Only sum orders in a "confirmed" state
+await Event.query()
+  .withSum('orders', 'total', q => q.where('status', 'confirmed'))
+  .get()
+
+// Count only orders placed this month
+await Event.query()
+  .withCount('orders', q => q.whereMonth('createdAt', String(new Date().getMonth() + 1)))
+  .get()
+
+// Exists check: does the event have any pending orders?
+await Event.query()
+  .withExists('orders', q => q.where('status', 'pending'))
+  .get()
+```
+
+### Dotted-path through aggregates
+
+Aggregates can walk multiple hasMany/hasOne hops using dotted notation.
+Aliases are derived by concatenating the capitalized path segments with
+the aggregate + column suffix.
+
+```js
+// Sum every user's orders across all their events
+await User.query().withSum('events.orders', 'total').get()
+// → user.eventsOrdersSumTotal
+
+// Count attendees three hops deep
+await User.query().withCount('events.orders.attendees').get()
+// → user.eventsOrdersAttendeesCount
+
+// Does the user have any orders anywhere?
+await User.query().withExists('events.orders').get()
+// → user.eventsOrdersExists
+
+// Leaf constraints still apply on the deepest hop
+await User.query()
+  .withSum('events.orders', 'total', q => q.where('status', 'confirmed'))
+  .get()
+```
+
+`withAvg` on a through-path returns a true average — the sum and count
+are folded through every hop so an asymmetric fan-out (one event with 1
+order, one with 3) reports `total_sum / total_count`, not the average of
+per-event averages.
+
+> **Under the hood.** Each aggregate compiles to hops+1 queries — one
+> bridge query per intermediate hop plus one grouped leaf query. No
+> `JOIN`s are emitted, so aggregates work across models that live on
+> different database connections. Bind lists are auto-chunked at driver
+> limits (SQLite 900, MSSQL 2000, Postgres 30k, MySQL 50k), so a parent
+> list of 100k ids does not blow past `SQLITE_MAX_VARIABLE_NUMBER`.
+
 ### whereHas / has / doesntHave
 
 Filter models by relation existence:
