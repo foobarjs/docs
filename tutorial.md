@@ -90,24 +90,16 @@ class Link extends Model {
 export default Link
 ```
 
-Sync the schema to the database:
+Save the file. Because `foobar serve --dev` is watching, the framework
+restarts and syncs the schema for you — you'll see a `links` table
+created in the console output. No `db:sync` command needed.
 
-```bash
-foobar db:sync
-```
-
-Output:
-
-```
-Syncing schema from models...
-+ create table links (id, title, url, clicks, created_at, updated_at)
-✓ Schema in sync
-```
-
-> **Heads-up.** `db:sync` is the fast dev-loop tool: it diffs models against
-> the DB and applies the change directly. For production you generate
-> versioned migrations with `foobar db:make` and apply them with
-> `foobar db:migrate`. Same models, different workflow.
+> **Heads-up.** Auto-sync is on because the scaffold hasn't generated a
+> `database/migrations/` folder yet. The moment you run `foobar db:make`
+> (to snapshot your first real migration), the boot switches to
+> "migrations-only" mode and `foobar db:migrate` becomes the way you
+> promote schema changes. That's the path you'd use in CI / production;
+> the auto-sync is a dev-loop convenience.
 
 ## 4. See it in the admin panel
 
