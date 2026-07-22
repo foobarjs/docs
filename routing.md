@@ -436,6 +436,44 @@ router.namedRoutes()
 // → Map<string, { name, method, path, route }>
 ```
 
+## Explicit routes override conventions
+
+Convention routing backfills every REST verb your controller implements
+(`index`, `new`, `store`, `show`, `edit`, `update`, `destroy`) **except** any
+action you have already claimed with an explicit
+`router.get/post/put/patch/delete(path, ControllerClass, 'action')` in
+`routes/web.js`. The claim is on the **(Controller, action)** pair — the path
+you register at is irrelevant. Claim once, wherever you like, and convention
+will not double-mount that verb at its default REST URL.
+
+**Before v0.3.0** — both routes were live simultaneously, which was almost
+never what you wanted:
+
+```js
+// routes/web.js
+router.get('/tickets/my/:id/edit', TicketsController, 'edit')
+
+// Registered routes at boot:
+// GET  /tickets/my/:id/edit  → TicketsController#edit   (your explicit route)
+// GET  /tickets/:id/edit     → TicketsController#edit   (auto REST — SURPRISE)
+```
+
+**v0.3.0 and later** — the explicit declaration wins; convention skips the
+matching REST verb and prints an info line at boot so you can see what got
+suppressed:
+
+```
+[foobar] Skipping convention mount for TicketsController#edit (GET /tickets/:id/edit) — already claimed by explicit route
+```
+
+Every other REST verb on `TicketsController` (`index`, `store`, `show`,
+`update`, `destroy`, …) is still auto-mounted at its default path — only the
+`edit` action's default is skipped. If you actually want both paths bound to
+the same action, declare both explicitly.
+
+You can inspect the claim set at any time via `router.claimedActions()` which
+returns a `Set<string>` of `"ControllerName#actionName"` keys.
+
 ## Next steps
 
 - Write the controllers your routes point at: [Controllers](./controllers.md)
