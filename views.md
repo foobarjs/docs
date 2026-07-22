@@ -47,20 +47,11 @@ JSX views are function components that receive props and return JSX. They use
 Class names in foobarjs JSX use `class` (not `className`) — the JSX runtime
 treats them as plain HTML attributes.
 
-### Setup
-
-Add the JSX loader to your dev and start scripts so Node can import `.jsx` files:
-
-```json
-{
-  "scripts": {
-    "dev": "node --import foobarjs/jsx-loader foobar serve --dev",
-    "start": "node --import foobarjs/jsx-loader foobar serve"
-  }
-}
-```
-
 ### Writing a JSX view
+
+`foobar serve` registers the JSX loader for you — no extra script wiring
+in `package.json` is required. Any `.jsx` (or `.tsx`) file under
+`app/views/` is importable and renderable via `Controller#render`.
 
 ```jsx
 // app/views/products/index.jsx

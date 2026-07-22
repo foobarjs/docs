@@ -144,27 +144,12 @@ export default {
 
 ## JSX views not rendering
 
-JSX views require the JSX loader to be registered before the app starts. Make sure your start script includes the `--import` flag:
-
-```json
-{
-  "scripts": {
-    "dev": "node --import foobarjs/jsx-loader app.js"
-  }
-}
-```
-
-If you're running tests, the test runner needs the same flag:
-
-```json
-{
-  "scripts": {
-    "test": "foobar test"
-  }
-}
-```
-
-The `foobar test` command automatically registers the JSX loader.
+`foobar serve` and `foobar test` both register the JSX loader
+automatically — no `--import` flag or extra `package.json` wiring is
+needed. If a `.jsx` view throws `ERR_UNKNOWN_FILE_EXTENSION`, you're
+likely running Node directly against your entry file instead of going
+through the CLI. Use `foobar serve` (or `foobar serve --dev` for watch
+mode) so the loader is in place before any view is imported.
 
 ---
 
