@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 ---
 title: Helpers
 layout: default
@@ -225,6 +227,73 @@ Obj.isEmpty({})          // true
 Obj.isEmpty(null)        // true
 Obj.wrap(null)           // {}
 Obj.wrap('hello')        // { value: 'hello' }
+```
+
+---
+
+## Crypto (`foobarjs/core`)
+
+Small wrappers over Node's `crypto` — hashing, HMAC, password hashing/verification.
+
+```js
+import { Crypto } from 'foobarjs/core'
+
+Crypto.hash('anything')                // SHA-256 hex digest
+Crypto.hmac('payload', appSecret)       // HMAC-SHA256 hex digest
+Crypto.hashPassword('plain')            // scrypt with random salt
+Crypto.verifyPassword('plain', hash)    // true/false
+```
+
+Use `Crypto.hmac` when signing anything short-lived (webhook payloads, single-use link tokens). Use `Crypto.hashPassword` for account passwords (`AuthenticableModel` already calls it).
+
+---
+
+## SignedUrl (`foobarjs/core`)
+
+Stateless HMAC-signed URLs — magic-link auth, unsubscribe links, temporary
+download links, no database table needed. The signature binds a set of
+query parameters and an expiry to the URL; verification detects tampering
+and expiry in one call.
+
+```js
+import { SignedUrl } from 'foobarjs/core'
+
+// Sign — expiresIn is in seconds. Defaults to 30 min.
+const link = SignedUrl.sign(
+  'https://app.example/tickets/verify',
+  { email: 'alice@example.com' },
+  APP_SECRET,
+  { expiresIn: 30 * 60 }
+)
+// → https://app.example/tickets/verify?email=alice%40example.com&exp=1729580400&sig=...
+
+// Verify — pass the received request URL.
+const { valid, expired, params } = SignedUrl.verify(request.url, APP_SECRET)
+if (!valid) return redirect('/tickets')
+if (expired) return renderExpiredMessage()
+// `params.email` is trustworthy at this point (it was signed).
+```
+
+- Order-independent: params are sorted by key before signing/verifying.
+- Timing-safe HMAC compare.
+- Not single-use — the link is valid until `exp` regardless of how many times it's opened. If you need single-use tokens, back them with a nonce table.
+
+Typical wiring in a controller:
+
+```js
+async send() {
+  const email = this.body.email.toLowerCase()
+  const base = `${new URL(this.c.req.url).origin}/tickets/verify`
+  const link = SignedUrl.sign(base, { email }, this._secret(), { expiresIn: 30 * 60 })
+  await Mailer.to(email).subject('Your link').text(link).send()
+  return this.render('sent')
+}
+
+async verify() {
+  const { valid, expired, params } = SignedUrl.verify(this.c.req.url, this._secret())
+  if (!valid) return this.redirect('/tickets')
+  // ...
+}
 ```
 
 ---

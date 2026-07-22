@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Conventions
 
 foobarjs is **convention-over-configuration**. Put a file in the right folder

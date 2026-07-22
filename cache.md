@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Cache
 
 foobarjs provides a simple caching layer with multiple storage drivers.

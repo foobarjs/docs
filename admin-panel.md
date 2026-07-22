@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Admin Panel
 
 The `foobarjs/admin` plugin generates a full admin panel for all your models with zero configuration. It uses Bootstrap 5 with offline assets, Edge templates, and supports per-model customization, search, filters, bulk actions, and granular permissions.
@@ -380,9 +382,19 @@ class User extends AuthenticableModel {
 
 #### Admin access
 
-By default only `isAdmin: true` users or users with at least one role can enter the admin panel. Set `admin.requireAdmin: false` to allow any authenticated user in and rely entirely on per-model permissions.
+By default only `isAdmin: true` users **or** users with at least one role can enter the admin panel. Two config knobs tune this in `config/admin.js`:
 
-When a permission is denied, the user is redirected back to the admin dashboard with a flash message.
+```js
+export default {
+  requireAdmin: true,   // enforce the entry check at all (default true)
+  strictAdmin: false,   // when true, ONLY isAdmin users enter. Roles alone are not enough.
+}
+```
+
+- `requireAdmin: false` — any authenticated user can enter; per-resource `.permissions({ view: [...] })` becomes the only gate.
+- `strictAdmin: true` — locks the panel to `isAdmin` users. Organizers with `roles: ['organizer']` are redirected to `/`. Use this when your app runs organizer workflows outside the admin panel (e.g. a dedicated `/organizer/*` area) and you want a clean separation.
+
+When a permission is denied, the user is redirected back to the admin dashboard with a flash message. When a record id in a URL doesn't resolve (e.g. `/admin/attendees/999999`), the panel flashes `"<Model> not found."` and redirects to the resource index — no 500 crash, no stale-URL leak.
 
 Custom row and bulk [actions](#inline--bulk-actions) are authorized the same way — see `.can()` there.
 

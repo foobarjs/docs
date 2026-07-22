@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Notifications
 
 foobarjs provides a notification system for sending messages through multiple channels: database, mail, and broadcast.

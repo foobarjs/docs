@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Realtime
 
 foobarjs provides WebSocket-based realtime features through the `foobarjs/realtime` package. It integrates with the foobarjs server and can use Redis pub/sub for broadcasting across multiple server processes.

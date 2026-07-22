@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Events
 
 foobarjs includes a simple event system for decoupling application logic. Events and listeners are auto-discovered from `app/events/` and `app/listeners/`.

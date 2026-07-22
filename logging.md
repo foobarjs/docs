@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Logging
 
 foobarjs ships with a lightweight `Logger` that writes structured logs to stdout (pretty in TTY, JSON when piped) and optionally to a file. There are no external dependencies.

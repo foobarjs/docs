@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Directory Structure
 
 foobarjs follows a convention-over-configuration directory layout.

@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 {% raw %}
 # Routing
 
@@ -54,9 +56,7 @@ For each verb, the two-arg form `(path, callback)` and the three-arg form
 You can also pass middleware classes or instances between the path and handler:
 
 ```js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
-
-router.get('/dashboard', RequireAuthMiddleware, (c) => {
+router.get('/dashboard', 'auth', (c) => {
   return c.json({ user: c.get('user') })
 })
 ```
@@ -83,7 +83,7 @@ router.get('/dashboard', DashboardController, 'index')
   .withoutMiddleware(['Analytics'])
 ```
 
-`.public()` is sugar for `.withoutMiddleware(['RequireAuthMiddleware'])`. Pass middleware names (strings, derived from filenames) or imported references.
+`.public()` is sugar for `.withoutMiddleware(['auth'])`. Pass middleware names (strings, derived from filenames) or imported references.
 
 ### Route model binding
 
@@ -168,7 +168,6 @@ just runs — put whatever routes you like in it.
 Group routes that share a prefix, middleware, or both:
 
 ```js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
 import DashboardController from '../app/controllers/dashboard.controller.js'
 import SettingsController from '../app/controllers/settings.controller.js'
 
@@ -176,8 +175,8 @@ export default function (router) {
   // Public routes
   router.get('/health', (c) => c.json({ status: 'ok' }))
 
-  // Protected routes — RequireAuthMiddleware applies to everything inside
-  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+  // Protected routes — 'auth' middleware applies to everything inside
+  router.group({ middleware: ['auth'] }, (router) => {
     router.get('/dashboard', DashboardController, 'index')
     router.get('/settings', SettingsController, 'index')
     router.post('/settings', SettingsController, 'update')
@@ -197,7 +196,7 @@ router.group({ prefix: '/api/v1' }, (router) => {
 #### Middleware + Prefix
 
 ```js
-router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) => {
+router.group({ prefix: '/api', middleware: ['auth'] }, (router) => {
   router.resource('orders', OrdersController)       // → /api/orders/*
 })
 ```
@@ -207,10 +206,10 @@ router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) =
 Groups can be nested. Prefixes concatenate and middleware stacks:
 
 ```js
-router.group({ prefix: '/api', middleware: [RequireAuthMiddleware] }, (router) => {
+router.group({ prefix: '/api', middleware: ['auth'] }, (router) => {
   router.group({ prefix: '/v1', middleware: [RateLimitMiddleware] }, (router) => {
     router.get('/items', ItemsController, 'index')  // → GET /api/v1/items
-    // Both RequireAuthMiddleware and RateLimitMiddleware run
+    // Both 'auth' and RateLimitMiddleware run
   })
 })
 ```
@@ -259,12 +258,37 @@ in `routes/web.js` is equivalent and clearer.
 Sub-folders work: `app/controllers/admin/orders.controller.js` mounts at
 `/admin/orders`.
 
-Convention routes follow the zero-trust policy. To make a convention controller public, add `static auth = false`:
+Convention routes follow the auth-first policy. To make a convention controller public, add `static auth = false`:
 
 ```js
 class PagesController extends Controller {
   static auth = false
 }
+```
+
+### Custom controller actions
+
+Convention routing **only** mounts the seven REST verbs above. Custom methods
+(anything that isn't `index`/`new`/`store`/`show`/`edit`/`update`/`destroy`)
+must be registered explicitly in `routes/web.js`:
+
+```js
+// app/controllers/organizer/dashboard.controller.js has an exportAttendees() method
+
+// routes/web.js
+router.get('/organizer/dashboard/export-attendees', DashboardController, 'exportAttendees')
+```
+
+If you hit a URL that matches `{controllerPath}/{action}` where the action
+exists on the controller but no route is registered, the 404 response tells
+you exactly what to add:
+
+```
+Cannot GET /organizer/dashboard/exportAttendees
+
+DashboardController.exportAttendees() exists but no route is registered.
+Add this to routes/web.js:
+  router.get('/organizer/dashboard/exportAttendees', DashboardController, 'exportAttendees')
 ```
 
 ## Route parameters

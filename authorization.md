@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 {% raw %}
 # Authorization
 
@@ -260,7 +262,7 @@ The API plugin checks gates on every endpoint:
 - **Update** (`PUT /api/orders/:id`): checks `update` per item
 - **Delete** (`DELETE /api/orders/:id`): checks `delete` per item
 
-If a gate returns `false`, the API responds with `403 Forbidden`. If no gate exists for a model with authenticated endpoints, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks. This enforces zero-trust: every authenticated API model must have a gate.
+If a gate returns `false`, the API responds with `403 Forbidden`. If no gate exists for a model with authenticated endpoints, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks. This enforces the gate requirement: every authenticated API model must have a gate.
 
 ### Controllers
 

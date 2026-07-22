@@ -56,12 +56,15 @@ foobarjs is opinionated so you can focus on building.
 ## Auth & Security
 
 - [Authentication](./authentication.md)
+- [Authorization](./authorization.md)
+- [Middleware](./middleware.md)
 - [Security](./security.md)
 
 ## Admin & API
 
 - [Admin panel](./admin-panel.md)
 - [API](./api.md)
+- [Helpers](./helpers.md)
 
 ## Async
 
@@ -77,6 +80,11 @@ foobarjs is opinionated so you can focus on building.
 ## Testing
 
 - [Testing](./testing.md)
+
+## Recipes & Troubleshooting
+
+- [Recipes](./recipes.md)
+- [Troubleshooting](./troubleshooting.md)
 
 ## Related
 

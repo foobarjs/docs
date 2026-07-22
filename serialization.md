@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Serialization
 
 foobarjs provides a serialization layer for transforming models and collections into JSON responses.

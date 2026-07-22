@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 {% raw %}
 # Recipes & Recommendations
 
@@ -69,12 +71,12 @@ look similar but work at different levels.
 | Mechanism | Scope | Effect |
 |-----------|-------|--------|
 | `static auth = false` on controller | All actions in that controller | Marks the controller as public (convention routes) |
-| `.public()` on a route | Single route or group | Removes `RequireAuthMiddleware` from that route |
+| `.public()` on a route | Single route or group | Removes `'auth'` middleware from that route |
 | `auth` in `config/api.js` | Auto-generated API endpoints | Controls API auth per-model or globally |
 
 ### How they compose
 
-The auth system is zero-trust by default (`config/auth.js` `guard: 'required'`).
+The auth system is auth-first by default (web layer) (`config/auth.js` `guard: 'required'`).
 Every route requires authentication unless explicitly opted out.
 
 ```js
@@ -111,7 +113,7 @@ with `only`/`except` instead:
 ```js
 class OrdersController extends Controller {
   static middleware = {
-    use: [RequireAuthMiddleware],
+    use: ['auth'],
     except: ['index', 'show'],
   }
 }
@@ -328,16 +330,16 @@ precedence order.
 For the API plugin, the precedence is different:
 
 ```
-1. Api.resource(Model).auth(...)  (app/api/*.api.js)
-2. config/api.js -> models[ModelName]
-3. static apiAuth on the model class
-4. config/api.js -> top-level auth
+1. Api.resource(Model).middleware('auth')  (app/api/*.api.js)
+2. Api.resource(Model).auth(...)  (app/api/*.api.js)
+3. config/api.js -> models[ModelName]
+4. config/api.js -> top-level auth (default: false)
 ```
 
 ### Real-world example: mixed public and private
 
 ```js
-// config/auth.js -- zero-trust baseline
+// config/auth.js -- auth-first baseline
 export default { guard: 'required' }
 
 // routes/web.js -- opt specific routes out
@@ -358,10 +360,10 @@ export default {
 
 A controller's `static auth = false` applies regardless of how it is
 registered (convention or explicit). To override it for a specific route,
-add `RequireAuthMiddleware` inline:
+add `'auth'` middleware inline:
 
 ```js
-router.get('/pages/secret', RequireAuthMiddleware, PagesController, 'secret')
+router.get('/pages/secret', 'auth', PagesController, 'secret')
 ```
 
 **Foobar recommends:** Set `guard: 'required'` in `config/auth.js` (the
@@ -652,8 +654,8 @@ Four ways to define routes. They coexist and each has a sweet spot.
 
 | Method | Best for | Auth default |
 |--------|----------|--------------|
-| `routes/web.js` explicit | Custom paths, inline handlers, non-REST routes | Required (zero-trust) |
-| Convention routes (filename) | Standard REST controllers | Required (zero-trust) |
+| `routes/web.js` explicit | Custom paths, inline handlers, non-REST routes | Required (auth-first) |
+| Convention routes (filename) | Standard REST controllers | Required (auth-first) |
 | API plugin auto-routes | Model CRUD APIs | Configured in `config/api.js` |
 | Admin plugin routes | Admin panel (auto-generated) | Requires admin session |
 

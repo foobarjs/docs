@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Authentication
 
 foobarjs provides session-based authentication out of the box via the `foobarjs/auth` plugin.
@@ -106,17 +108,16 @@ Protect routes by importing and applying middleware classes from `foobarjs/auth`
 
 | Middleware | Description |
 |------------|-------------|
-| `RequireAuthMiddleware` | Redirects to `/login` if not authenticated (returns 401 JSON for API requests) |
+| `'auth'` (alias for `RequireAuthMiddleware`) | Redirects to `/login` if not authenticated (returns 401 JSON for API requests) |
 | `GuestMiddleware` | Redirects to `/` if already authenticated |
 
 ### On a controller
 
 ```js
 import { Controller } from 'foobarjs/core'
-import { RequireAuthMiddleware } from 'foobarjs/auth'
 
 export default class DashboardController extends Controller {
-  static middleware = [RequireAuthMiddleware]
+  static middleware = ['auth']
 
   async index() {
     return this.render('dashboard/index', { user: this.getLoggedInUser() })
@@ -129,7 +130,7 @@ Use `only` or `except` to apply auth selectively:
 ```js
 class PostsController extends Controller {
   static middleware = {
-    use: [RequireAuthMiddleware],
+    use: ['auth'],
     except: ['index', 'show'],
   }
 }
@@ -139,14 +140,14 @@ class PostsController extends Controller {
 
 ```js
 // routes/web.js
-import { RequireAuthMiddleware, GuestMiddleware } from 'foobarjs/auth'
+import { GuestMiddleware } from 'foobarjs/auth'
 
 export default function (router) {
   // Single route
-  router.get('/dashboard', RequireAuthMiddleware, DashboardController, 'index')
+  router.get('/dashboard', 'auth', DashboardController, 'index')
 
   // Group of routes
-  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+  router.group({ middleware: ['auth'] }, (router) => {
     router.get('/settings', SettingsController, 'index')
     router.post('/settings', SettingsController, 'update')
   })
@@ -292,9 +293,11 @@ if (c.currentAccessToken()?.can('write')) {
 
 ### Multiple Authenticable Models
 
-Any model that extends `AuthenticableModel` can own tokens. The `tokenableType`
-field on `PersonalAccessToken` stores the model class name, so the auth
-middleware resolves the correct model automatically.
+Any model that extends `AuthenticableModel` is auto-registered in
+`AuthenticableRegistry` at boot. The session middleware and bearer resolver
+both use this registry to load the correct model based on `session.userType`
+(for cookie sessions) or `token.tokenableType` (for Bearer tokens). One
+session cookie, one `this.user`, whichever authenticable type is logged in.
 
 ```js
 import { AuthenticableModel } from 'foobarjs/auth'
@@ -307,6 +310,9 @@ export default class Merchant extends AuthenticableModel {
     password: Field.string().required().hidden(),
     apiKey: Field.string(),
   }
+  // Optional. Defaults to 'email'. Used by findForAuth() for password login
+  // AND as the session key so browser sessions survive Model.find() lookups.
+  static authIdentifierName = 'email'
 }
 ```
 
@@ -314,6 +320,72 @@ Then add `merchant: 'Merchant'` to `config/auth.js` `tokenAuth.models` and
 clients can authenticate with `{"type": "merchant", "email": "...", "password": "..."}`.
 
 Admin panel login always uses the `User` model — this is not configurable.
+
+**Controllers know who's logged in:**
+
+```js
+async someAction() {
+  // this.user is whichever AuthenticableModel is currently in session.
+  if (this.user instanceof Merchant) {
+    // merchant-specific flow
+  } else if (this.user instanceof User) {
+    // user flow
+  }
+}
+```
+
+### Session helpers on Controller
+
+Any custom login flow (magic link, OAuth, SSO) should end at the same
+session shape as the built-in `/login`:
+
+```js
+class MagicLinkController extends Controller {
+  async verify() {
+    const attendee = await Attendee.findForAuth(email)
+    if (!attendee) return this.redirect('/login')
+    this.login(attendee)            // writes session.userId + session.userType
+    return this.redirect('/portal')
+  }
+
+  async logout() {
+    this.logout()                    // clears both keys
+    return this.redirect('/')
+  }
+}
+```
+
+`this.login(model)` writes `session.get('userId') = model.getAuthIdentifier()`
+and `session.get('userType') = model.constructor.name`. On the next request,
+the auth middleware looks up `AuthenticableRegistry.get(userType)` and calls
+`Model.findForAuth(userId)`, producing the same `this.user` your `/login`
+route would have produced.
+
+### Gate closures with multi-model auth
+
+Because `this.user` can be any authenticable, gate closures should defend
+against the actor type when the check is model-specific:
+
+```js
+// event.gate.js — back-office actions only
+export default Gate({
+  model: Event,
+  update(user, event) {
+    if (!(user instanceof User)) return false     // reject Attendee/Merchant sessions
+    return user.isAdmin || event.organizer === user.id
+  },
+})
+
+// attendee.gate.js — polymorphic per actor
+export default Gate({
+  model: Attendee,
+  view(user, ticket) {
+    if (user instanceof User) return true                          // admin sees all
+    if (user instanceof Attendee) return ticket?.email === user.email  // owner
+    return false
+  },
+})
+```
 
 ### Current User Endpoint
 

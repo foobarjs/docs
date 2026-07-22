@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 {% raw %}
 ---
 title: Middleware
@@ -151,7 +153,38 @@ Middleware runs in alphabetical order within each folder. Prefix with `01-`, `02
 |-------------|---------------|-----|
 | `async function` | Yes | Middleware must be async (it calls `await next()`) |
 | Class with `handle()` | Yes | Instantiated, `handle(c, next)` is called |
+| Class with `handle()` + `static global = false` | **No** — aliased only | For opt-in middleware referenced explicitly on controllers/routes |
 | Regular `function` | No — treated as factory | Sync functions return configured middleware |
+
+### Aliased-only middleware (`static global = false`)
+
+Set `static global = false` on a class-based middleware to keep it out of the
+global auto-apply chain while still registering its filename alias for
+explicit use. This is the right shape for "only run on some routes"
+middleware:
+
+```js
+// app/middlewares/RequireAttendee.js
+import Attendee from '../models/attendee.model.js'
+
+class RequireAttendee {
+  static global = false     // do not auto-apply globally
+
+  async handle(c, next) {
+    if (!(c.get('user') instanceof Attendee)) return c.redirect('/tickets')
+    return next()
+  }
+}
+export default RequireAttendee
+```
+
+```js
+// In a controller — reference by filename alias:
+static middleware = { use: ['auth', 'RequireAttendee'], only: ['my', 'edit'] }
+```
+
+Without `static global = false`, `RequireAttendee` would run on *every*
+request and redirect non-attendees away — the opposite of what you want.
 
 ## Applying middleware
 
@@ -161,10 +194,8 @@ Pass middleware between the path and handler:
 
 ```js
 // routes/web.js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
-
 export default function (router) {
-  router.get('/dashboard', RequireAuthMiddleware, (c) => {
+  router.get('/dashboard', 'auth', (c) => {
     return c.json({ user: c.get('user') })
   })
 }
@@ -189,12 +220,10 @@ router.get('/dashboard', DashboardController, 'index')
 Use `router.group()` to apply middleware to multiple routes:
 
 ```js
-import { RequireAuthMiddleware } from 'foobarjs/auth'
-
 export default function (router) {
   router.get('/health', (c) => c.json({ status: 'ok' }))
 
-  router.group({ middleware: [RequireAuthMiddleware] }, (router) => {
+  router.group({ middleware: ['auth'] }, (router) => {
     router.get('/dashboard', DashboardController, 'index')
     router.resource('orders', OrdersController)
   })
@@ -220,10 +249,9 @@ Use `static middleware` to apply middleware to all actions:
 
 ```js
 import { Controller } from 'foobarjs/core'
-import { RequireAuthMiddleware } from 'foobarjs/auth'
 
 class OrdersController extends Controller {
-  static middleware = [RequireAuthMiddleware]
+  static middleware = ['auth']
 
   index() { /* ... */ }
   store() { /* ... */ }
@@ -235,7 +263,7 @@ Limit to specific actions with `only` or `except`:
 ```js
 class PostsController extends Controller {
   static middleware = {
-    use: [RequireAuthMiddleware],
+    use: ['auth'],
     only: ['store', 'update', 'destroy'],
   }
 }
@@ -291,8 +319,53 @@ Available for explicit use:
 
 | Class | Import | Description |
 |-------|--------|-------------|
-| `RequireAuthMiddleware` | `foobarjs/auth` | Rejects unauthenticated requests (redirect or 401) |
+| `RequireAuthMiddleware` (alias: `'auth'`) | `foobarjs/auth` | Rejects unauthenticated requests (redirect or 401) |
 | `GuestMiddleware` | `foobarjs/auth` | Redirects authenticated users away |
+
+## Middleware aliasing
+
+Middleware can be referenced by string alias instead of importing the class directly.
+
+### Built-in aliases
+
+| Alias | Class |
+|-------|-------|
+| `'auth'` | `RequireAuthMiddleware` |
+
+The `'auth'` alias is registered at boot regardless of `auth.guard` mode. Use
+it on a controller (`static middleware = ['auth']`), on a route
+(`.middleware(['auth'])`), or in a group — it resolves consistently whether
+your app is auth-first or public-by-default.
+
+### Filename-based aliases
+
+Middleware files in `app/middlewares/` are automatically aliased by their filename stem:
+
+```
+app/middlewares/
+  RateLimit.js    → 'RateLimit'
+  LogRequest.js   → 'LogRequest'
+```
+
+### Usage
+
+String aliases work everywhere middleware is accepted:
+
+```js
+// Controller
+static middleware = ['auth']
+
+// Route
+router.get('/dashboard', DashboardController, 'index').middleware(['auth'])
+
+// Opt out
+router.get('/pricing', PagesController, 'pricing').withoutMiddleware(['auth'])
+
+// Group
+router.group({ middleware: ['auth'] }, (r) => {
+  // ...
+})
+```
 
 ## The request context (`c`)
 

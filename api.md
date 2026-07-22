@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # API
 
 The `foobarjs/api` plugin generates a RESTful JSON API for every registered
@@ -31,9 +33,9 @@ The URL segment is the model's `getTableName()`. `Product` → `/api/products`,
 
 ## Authentication
 
-**The API is authenticated by default.** Out of the box every endpoint requires
-an authenticated request (`auth: 'session'`), so registering `foobarjs/api`
-without any config does *not* expose your data publicly.
+**The API is **public by default**.** Out of the box every endpoint is
+unauthenticated (`auth: false`), so registering `foobarjs/api` exposes your
+data publicly unless you add authentication explicitly.
 
 Authentication is resolved by the `foobarjs/auth` plugin, which must be
 registered **before** `foobarjs/api`:
@@ -81,21 +83,23 @@ A rule can be:
 
 Resolution precedence (most specific wins):
 
-1. `models[ModelName]` in `config/api.js`
-2. `static apiAuth` on the model class
-3. the top-level `auth` option
+1. `.middleware('auth')` on `Api.resource(Model)`
+2. `.auth()` on `Api.resource(Model)`
+3. `models[ModelName]` in `config/api.js`
+4. the top-level `auth` option (default: `false`)
 
 The gate **fails closed**: if `foobarjs/auth` is not registered there is never a
 current user, so every non-public rule rejects with `401`.
 
-> **Zero-trust gates:** Authenticated API models must have a registered gate. If no gate exists for an authenticated model, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks.
+> **Gate enforcement:** Authenticated API models must have a registered gate. If no gate exists for an authenticated model, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks.
 
 ```js
-// Per-model override on the model itself
-class AuditLog extends Model {
-  static apiAuth = 'token'   // this resource always requires a Bearer token
-  static schema = { /* ... */ }
-}
+// Per-resource auth via Api.resource
+import { Api } from 'foobarjs/api'
+import AuditLog from '../models/audit-log.model.js'
+
+export default Api.resource(AuditLog)
+  .middleware('auth')   // this resource requires authentication
 ```
 
 A request that fails its rule gets HTTP `401`:
@@ -114,6 +118,7 @@ import { Api } from 'foobarjs/api'
 import Order from '../models/order.model.js'
 
 export default Api.resource(Order)
+  .middleware('auth')                      // protect this resource
   .only(['index', 'show', 'store'])       // only these routes
   .fillable(['name', 'status', 'total'])   // writable fields (POST/PUT)
   .hidden(['internal_notes', 'cost'])      // stripped from responses
@@ -122,7 +127,7 @@ export default Api.resource(Order)
   .includable(['items', 'customer'])       // allowed include relations
   .perPage(50)                             // default page size
   .maxPerPage(200)                         // max allowed page size
-  .auth({ read: 'public', write: 'token' })
+  .auth({ read: false, write: 'token' })
 ```
 
 ### Configuration Options
@@ -138,7 +143,8 @@ export default Api.resource(Order)
 | `includable(relations)` | Only these relations can be eager loaded with `?include=` |
 | `perPage(n)` | Default page size for this resource |
 | `maxPerPage(n)` | Maximum allowed `?perPage=` value |
-| `auth(rule)` | Auth rule for this resource (highest precedence). Accepts the same values as `config/api.js` auth. |
+| `middleware(name)` | Add middleware (e.g. `'auth'`) to this resource's routes |
+| `auth(rule)` | Auth rule for this resource. Accepts the same values as `config/api.js` auth. |
 
 ### Route filtering
 
@@ -168,12 +174,12 @@ Api.resource(User)
 
 ### Auth precedence
 
-When `Api.resource()` sets `.auth()`, it takes the highest precedence:
+When `Api.resource()` is configured, precedence is:
 
-1. `Api.resource(Model).auth(...)` — per-resource config file
-2. `config/api.js` → `models[ModelName]` — global per-model override
-3. `static apiAuth` on the model class
-4. `config/api.js` → `auth` — global default
+1. `Api.resource(Model).middleware('auth')` — per-resource middleware
+2. `Api.resource(Model).auth(...)` — per-resource config file
+3. `config/api.js` → `models[ModelName]` — global per-model override
+4. `config/api.js` → `auth` — global default (`false`)
 
 ### Discovery
 

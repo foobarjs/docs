@@ -1,3 +1,5 @@
+[← Back to docs](../README.md)
+
 # ORM: Relationships
 
 Foobar ORM supports four relationship types: BelongsTo, HasMany, HasOne, and BelongsToMany.
@@ -33,9 +35,34 @@ const products = await Product.with('category').get()
 await product.load('category')
 console.log(product.category.name)  // → Category model instance
 
-// Nested lazy load
+// Nested lazy load — object form OR dot syntax
 await product.load({ category: ['products'] })
+await product.load('category.products')
+await product.load('category.products.reviews')      // arbitrarily deep
+await product.load('category', 'tags')               // multiple relations in one call
+
+// load() dedupes: no query is issued if the relation is already loaded.
+// Safe to call repeatedly (e.g. inside a loop or per-request middleware).
+await product.load('category')                        // hits DB
+await product.load('category')                        // no-op
 ```
+
+### Detecting whether a relation is loaded
+
+`product.category` returns:
+
+- the FK id (or `null`) when the relation has **not** been loaded
+- a related-model instance when it **has** been loaded
+
+Userland is responsible for the distinction. A quick guard:
+
+```js
+const category = product.category instanceof Category
+  ? product.category
+  : (await product.load('category'), product.category)
+```
+
+Or just call `load()` unconditionally — it early-returns when already loaded.
 
 ## HasMany
 

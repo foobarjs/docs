@@ -1,3 +1,5 @@
+[← Back to docs](../README.md)
+
 # Database migrations
 
 foobarjs supports **file-based migrations** — versioned, reviewable,

@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Mail
 
 foobarjs provides a mail abstraction with multiple drivers for sending emails.

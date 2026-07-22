@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Controllers
 
 Controllers group related request handling logic into a single class. They
@@ -66,6 +68,50 @@ direct access to the underlying Hono context.
 | `this.env(key, default)` | Read an environment variable from `process.env`. |
 | `this.c` | Raw Hono context. Escape hatch for anything the helpers don't cover. |
 
+### Download helpers
+
+```js
+class ReportsController extends Controller {
+  async exportUsers() {
+    const users = await User.all()
+    return this.downloadCsv(users, 'users.csv')
+  }
+
+  async exportCustom() {
+    const rows = [{ name: 'Alice', score: 95 }, { name: 'Bob', score: 87 }]
+    return this.downloadCsv(rows, 'scores.csv', { headers: ['name', 'score'] })
+  }
+
+  async exportInvoice() {
+    return this.downloadFile('/storage/invoices/INV-001.pdf')
+  }
+
+  async exportRaw() {
+    const xml = '<data><item>1</item></data>'
+    return this.download(xml, 'export.xml', 'application/xml')
+  }
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `this.download(content, filename, contentType?)` | Send any content as a file download. Defaults to `application/octet-stream`. |
+| `this.downloadCsv(rows, filename, options?)` | Convert an array of objects to CSV and download. `options.headers` overrides column order. |
+| `this.downloadFile(filePath, filename?)` | Stream a file from disk. Uses the file's basename if `filename` is omitted. |
+
+### Pagination
+
+```js
+class ProductsController extends Controller {
+  async index() {
+    const products = await this.paginate(Product.query().where('published', true))
+    return this.json(products)
+  }
+}
+```
+
+`this.paginate(query, perPage?)` reads `page` and `per_page` from the request query string automatically. Returns a `{ data, meta }` envelope. Default `perPage` is 15.
+
 ## Controller Middleware
 
 Declare middleware on a controller with a static `middleware` property. The middleware runs before every action on that controller — whether the route was registered explicitly or via convention.
@@ -74,10 +120,10 @@ Declare middleware on a controller with a static `middleware` property. The midd
 
 ```js
 import { Controller } from 'foobarjs/core'
-import { RequireAuthMiddleware } from 'foobarjs/auth'
+// import { RequireAuthMiddleware } from 'foobarjs/auth'  // class import also works
 
 class DashboardController extends Controller {
-  static middleware = [RequireAuthMiddleware]
+  static middleware = ['auth']
 
   async index() {
     return this.render('dashboard/index', { user: this.user })
@@ -90,7 +136,7 @@ class DashboardController extends Controller {
 ```js
 class PostsController extends Controller {
   static middleware = {
-    use: [RequireAuthMiddleware],
+    use: ['auth'],
     only: ['store', 'update', 'destroy'],
   }
 
@@ -107,7 +153,7 @@ class PostsController extends Controller {
 ```js
 class ArticlesController extends Controller {
   static middleware = {
-    use: [RequireAuthMiddleware],
+    use: ['auth'],
     except: ['index', 'show'],
   }
   // Auth runs on store, update, destroy — but not index or show
@@ -120,7 +166,7 @@ Stack middleware by adding more classes to the array:
 
 ```js
 class AdminReportsController extends Controller {
-  static middleware = [RequireAuthMiddleware, AdminOnlyMiddleware]
+  static middleware = ['auth', AdminOnlyMiddleware]
 }
 ```
 

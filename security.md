@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 {% raw %}
 # Security
 
@@ -16,12 +18,12 @@ These protections are always on and require no configuration:
 | **MIME magic byte validation** | File upload validation checks actual file bytes (JPEG, PNG, GIF, PDF, WebP, SVG, ZIP) — not just the client-reported Content-Type. |
 | **CSRF protection** | State-changing requests require a valid CSRF token (see [Middleware](./middleware.md)). |
 | **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. Extensible via config. |
-| **Zero-trust routing** | All routes require authentication by default. Public routes must be explicitly opted out with `.public()` or `static auth = false`. |
+| **Auth-first routing** | Web routes require authentication by default. API routes are public by default — protect with `.middleware('auth')`. |
 | **Gate authorization** | Gates check per-action, per-resource authorization across admin, API, and web routes. See [Authorization](./authorization.md). |
 
-## Zero-trust routing
+## Route authentication defaults
 
-foobarjs follows a **zero-trust-first** policy: every route requires authentication by default. Unauthenticated requests are redirected to `/login` (or receive a `401` JSON response for API clients). Auth pages (`/login`, `/register`) are automatically exempt.
+foobarjs uses **auth-first** defaults: web routes require authentication when `guard: 'required'` is set in `config/auth.js` (the default). API routes are **public by default** — protect them with `Api.resource(Model).middleware('auth')`. Unauthenticated requests to protected web routes are redirected to `/login` (or receive a `401` JSON response for API clients). Auth pages (`/login`, `/register`) are automatically exempt.
 
 To make a route public, opt out explicitly:
 
@@ -49,9 +51,9 @@ class PagesController extends Controller {
 }
 ```
 
-The existing `.withoutMiddleware(['RequireAuthMiddleware'])` also works — `.public()` is sugar for it.
+The existing `.withoutMiddleware(['auth'])` also works — `.public()` is sugar for it.
 
-**API routes** use their own auth system (`static apiAuth` on models). Set `apiAuth = 'public'` on a model to make its API endpoints publicly accessible. See [API](./api.md).
+**API routes** are public by default. To protect an API resource, use `Api.resource(Model).middleware('auth')`. See [API](./api.md).
 
 To revert to opt-in authentication, set `guard: 'manual'` in `config/auth.js`.
 

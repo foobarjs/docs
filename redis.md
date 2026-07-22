@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Redis
 
 foobarjs uses Redis for queue, cache, broadcast, and realtime features. The `foobarjs/redis` package provides connection management.

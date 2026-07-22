@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Queues
 
 foobarjs provides a queue system for deferring work out of the request cycle.

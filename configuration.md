@@ -1,3 +1,5 @@
+[← Back to docs](./README.md)
+
 # Configuration
 
 foobarjs uses a layered configuration system: built-in defaults → environment variables → config files in `config/`.
@@ -32,7 +34,7 @@ The framework ships with sensible defaults for every config key. You only need t
 | `mail.from` | `'hello@example.com'` | `MAIL_FROM` env |
 | `storage.default` | `'local'` | |
 | `storage.disks.local.root` | `'public/uploads'` | |
-| `auth.guard` | `'required'` | `'required'` = zero-trust; `'manual'` = opt-in auth |
+| `auth.guard` | `'required'` | `'required'` = auth-first (web); `'manual'` = opt-in auth |
 | `auth.loginRateLimit.max` | `5` | Login attempts per window |
 | `auth.loginRateLimit.windowMs` | `60000` | Login rate limit window |
 | `auth.tokenAuth.maxTokensPerUser` | `5` | Max API tokens per user |
@@ -236,7 +238,7 @@ export default {
 }
 ```
 
-See [Security](./security.md#zero-trust-routing) for zero-trust details, [Authentication](./authentication.md) for token auth, and [Security](./security.md#login-rate-limiter) for rate limiting.
+See [Security](./security.md#route-authentication-defaults) for auth defaults, [Authentication](./authentication.md) for token auth, and [Security](./security.md#login-rate-limiter) for rate limiting.
 
 ### `config/views.js`
 

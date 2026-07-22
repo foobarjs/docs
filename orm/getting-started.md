@@ -1,3 +1,5 @@
+[← Back to docs](../README.md)
+
 # ORM: Getting Started
 
 foobarjs includes a built-in Active Record ORM. It handles schema definition, querying, relationships, and persistence out of the box.
@@ -87,6 +89,33 @@ Field.string().minLength(3)         // Min length
 Field.string().hidden()             // Exclude from JSON
 Field.number().unsigned()           // Unsigned integer
 Field.string().enum('a', 'b', 'c')   // Enum values
+Field.json().enum('a', 'b', 'c').multiple()  // Array of enum values (multi-select)
+```
+
+### Multi-value fields with `.multiple()`
+
+`.multiple()` declares that the column stores an **array** of values. It's
+meaningful in combination with `.enum(...)`:
+
+```js
+// User model
+roles: Field.json().enum('admin', 'organizer').multiple().nullable()
+```
+
+This one line drives three layers automatically:
+
+| Layer | Behavior |
+|---|---|
+| **Storage** | JSON column holding an array (`["admin", "organizer"]`). |
+| **Validation** | Value must be an array; every element must be in the enum set. |
+| **Admin form** | Renders as a **tags** input with the enum values as suggestions — no per-field admin config needed. |
+| **Admin detail** | Shows selected values as chips. |
+
+Contrast with the single-value pattern:
+
+```js
+Field.string().enum('draft', 'published')      // single <select>
+Field.json().enum('a', 'b').multiple()          // multi-select tags input
 ```
 
 ### Indexes
@@ -289,6 +318,15 @@ Timestamps (`createdAt`, `updatedAt`, `deletedAt`) are also dayjs instances.
 
 When serializing with `toJSON()`, dayjs values are converted to ISO strings automatically. When saving, they are converted back to native `Date` objects for database storage.
 
+**Assigning strings to date fields is safe.** On save, `Field.date()` and `Field.datetime()` auto-coerce any string that `new Date(...)` can parse — ISO (`'2026-07-14T09:00:00Z'`), space-separated (`'2026-07-14 09:00:00'`), or the value posted by an HTML `<input type="datetime-local">` (`'2026-07-14T09:00'`). No manual conversion required in controllers, seeders, or tests.
+
+```js
+await Event.create({
+  title: 'Kickoff',
+  startsAt: request.body.startsAt,   // string from a form → auto-coerced to Date
+})
+```
+
 The query builder accepts dayjs instances in where clauses:
 
 ```js
@@ -315,6 +353,15 @@ Once your models are set up, get their tables into the database:
 
 The framework never auto-syncs your schema at server boot when migration
 files exist.
+
+**Auto-sync never drops tables.** When `Db.boot()` runs its auto-sync (used by
+tests and by boot when no `database/migrations/` files exist), it calls
+`schema.update({ dropTables: false })`. Tables that aren't in the registered
+model set are left alone. This is a deliberate safety net: any code path that
+boots the ORM with a partial model list — a one-off CLI command, a test
+harness that only loads a subset of models — can no longer wipe unrelated
+tables. Use `foobar db:sync --force` (with its snapshot diff and prod refusal)
+when you actually want a destructive schema change.
 
 ## Multiple Connections
 
@@ -989,6 +1036,22 @@ Product.query().whereColumn('price', '=', 'stock')
 // Escape hatch: raw SQL fragments (add to WHERE with bindings)
 Product.query().whereRaw('price > ? OR stock < ?', [50, 5])
 Product.query().orWhereRaw('name LIKE ?', ['%sale%'])
+```
+
+#### Or-variants
+
+```js
+// Items that are either featured OR have no expiry date
+const items = await Product.query()
+  .where('featured', true)
+  .orWhereNull('expiresAt')
+  .get()
+
+// Items with a price that also have a description OR a category
+const items = await Product.query()
+  .whereNotNull('price')
+  .orWhereNotNull('description')
+  .get()
 ```
 
 ### Closure-scoped nested WHERE
