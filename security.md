@@ -12,12 +12,11 @@ These protections are always on and require no configuration:
 | Protection | What it does |
 |------------|--------------|
 | **HMAC-signed sessions** | Session cookies are signed with `APP_SECRET` using SHA-256 HMAC. Timing-safe comparison prevents signature oracle attacks. |
-| **XSS-safe views** | JSX and Blade templates auto-escape all interpolated values. Never use `raw()` on user-supplied content. |
+| **XSS-safe views** | JSX views auto-escape all interpolated values. Never use `raw()` on user-supplied content. |
 | **Path traversal protection** | Storage operations reject paths that escape the disk root (`../../etc/passwd` throws). |
 | **Filename sanitization** | Admin file uploads strip directory components and special characters from filenames. |
 | **MIME magic byte validation** | File upload validation checks actual file bytes (JPEG, PNG, GIF, PDF, WebP, SVG, ZIP) — not just the client-reported Content-Type. |
 | **CSRF protection** | State-changing requests require a valid CSRF token (see [Middleware](./middleware.md)). |
-| **Template expression safety** | The Blade template engine blocks dangerous expressions (`process`, `require`, `eval`, `Function`, `globalThis`, `__proto__`) in template interpolation. Extensible via config. |
 | **Auth-first routing** | Web routes require authentication by default. API routes are public by default — protect with `.middleware('auth')`. |
 | **Gate authorization** | Gates check per-action, per-resource authorization across admin, API, and web routes. See [Authorization](./authorization.md). |
 
@@ -238,19 +237,6 @@ export default {
 
 Without an `authCallback`, all attempts to authenticate a WebSocket connection are rejected. Public channels (no `private-` or `presence-` prefix) remain open to all connected clients.
 
-## Template expression blocklist
-
-The Blade template engine uses `new Function()` to evaluate expressions like `{{ user.name }}`. To prevent code injection, a blocklist rejects expressions containing dangerous keywords: `process`, `require`, `import`, `eval`, `Function`, `globalThis`, `__proto__`.
-
-To add custom blocked keywords (e.g. for a CMS where templates come from untrusted sources), extend the blocklist in `config/views.js`:
-
-```js
-export default {
-  blockedExpressions: ['fetch', 'XMLHttpRequest', 'setTimeout', 'setInterval'],
-}
-```
-
-Custom keywords are added on top of the built-in defaults — you cannot remove the defaults.
 
 ## File upload security
 

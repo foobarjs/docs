@@ -3,13 +3,9 @@
 {% raw %}
 # Views
 
-foobarjs supports two view engines: **JSX** (recommended) and an Edge-inspired
-**Blade** template engine (`.html` files with `@` directives). Both live in
-`app/views/` and are rendered by controllers via `this.render(...)` or by
-convention.
-
-When both a `.jsx` and `.html` file exist for the same template, **JSX takes
-priority**. The resolution order is: `.jsx` → `.tsx` → `.html`.
+foobarjs uses **JSX** as its view engine. Views live in `app/views/` and are
+rendered by controllers via `this.render(...)` or by convention. The resolution
+order is: `.jsx` → `.tsx`.
 
 ## Rendering views
 
@@ -26,7 +22,7 @@ async index() {
 
 Templates are referenced by path relative to `app/views/`, without the
 extension. `'products/index'` resolves to `app/views/products/index.jsx` (or
-`.tsx`, or `.html`).
+`.tsx`).
 
 Outside a controller (e.g. from an inline callback in `routes/web.js`):
 
@@ -36,8 +32,6 @@ router.get('/pricing', (c) => c.render('marketing/pricing', { plans }))
 
 `c.render(template, data)` is the underlying primitive — `this.render()` is a
 thin wrapper around it.
-
-## Rendering views
 
 Views must be explicitly rendered from a controller action via `this.render()`.
 Returning a plain object from a controller action always returns JSON — there
@@ -49,6 +43,9 @@ See [Controllers](./controllers.md) for the auto response contract.
 
 JSX views are function components that receive props and return JSX. They use
 [Hono's JSX runtime](https://hono.dev/docs/guides/jsx) — no React required.
+
+Class names in foobarjs JSX use `class` (not `className`) — the JSX runtime
+treats them as plain HTML attributes.
 
 ### Setup
 
@@ -87,8 +84,7 @@ Each `.jsx` file exports a default function component. The data object passed to
 
 ### Layouts with composition
 
-Blade's `@layout`/`@section`/`@yield` pattern maps to component composition
-with `children`:
+Layouts are just components that render `children`:
 
 ```jsx
 // app/views/layouts/App.jsx
@@ -126,8 +122,7 @@ export default function ProductsIndex({ products }) {
 
 ### Raw HTML
 
-Use `raw()` from `hono/html` to inject unescaped HTML (equivalent to Blade's
-`{!! !!}`):
+Use `raw()` from `hono/html` to inject unescaped HTML:
 
 ```jsx
 import { raw } from 'hono/html'
@@ -142,6 +137,8 @@ export default function Post({ post }) {
 }
 ```
 
+Never call `raw()` on user-supplied content — it bypasses HTML escaping.
+
 ### Inline scripts
 
 Use `dangerouslySetInnerHTML` for inline `<script>` blocks:
@@ -154,14 +151,17 @@ Use `dangerouslySetInnerHTML` for inline `<script>` blocks:
 `}} />
 ```
 
-### Shared data in JSX
+### Shared data and view globals
 
-Data shared via `c.share()` or middleware is available through props. View
-globals (`user`, `loggedIn`, `flash`, `errors`, `old`) are merged into the
-props passed to your component:
+Data shared via `c.share()` or middleware is available in components. Reach
+for the `useView()` hook from `foobarjs/jsx` to read view globals (`user`,
+`loggedIn`, `flash`, `errors`, `old`) and any values added via `c.share()`:
 
 ```jsx
-export default function Header({ user, loggedIn, cartCount }) {
+import { useView } from 'foobarjs/jsx'
+
+export default function Header({ cartCount }) {
+  const { user, loggedIn } = useView()
   return (
     <nav>
       <a href="/">Home</a>
@@ -174,19 +174,19 @@ export default function Header({ user, loggedIn, cartCount }) {
 }
 ```
 
+The data object you pass to `this.render()` becomes the component's props;
+view globals and shared data flow through `useView()`.
+
 ## Error views
 
-Override the built-in error pages by dropping files in `app/views/errors/`.
-Both JSX and Blade formats work:
+Override the built-in error pages by dropping `.jsx` files in `app/views/errors/`:
 
 ```
-app/views/errors/404.jsx   (or .html)
+app/views/errors/404.jsx
 app/views/errors/500.jsx
 app/views/errors/403.jsx
 app/views/errors/419.jsx
 ```
-
-JSX example:
 
 ```jsx
 export default function NotFound({ status, message, requestId }) {
@@ -200,24 +200,12 @@ export default function NotFound({ status, message, requestId }) {
 }
 ```
 
-Blade example:
-
-```html
-@layout('layouts/app')
-
-@section('content')
-  <h1>{{ status }} — Page Not Found</h1>
-  <p>The page you requested could not be found.</p>
-  @if(requestId)<p>Request ID: {{ requestId }}</p>@endif
-@endsection
-```
-
 Lookup order for an error of status `N`:
 
-1. `errors/N.html` (exact)
-2. `errors/<class>xx.html` (e.g. `5xx.html` for any 5-series)
-3. `errors/error.html`
-4. `errors/500.html` (only for 5xx)
+1. `errors/N.jsx` (exact)
+2. `errors/<class>xx.jsx` (e.g. `5xx.jsx` for any 5-series)
+3. `errors/error.jsx`
+4. `errors/500.jsx` (only for 5xx)
 5. Built-in fallback page (production) or the diagnostic page (development)
 
 Variables available in error views:
@@ -234,7 +222,7 @@ See [Error handling](./error-handling.md) for the full pipeline.
 
 ## View globals
 
-Every render receives these automatically:
+Every render exposes these through `useView()`:
 
 | Global | Description |
 |--------|-------------|
@@ -246,28 +234,17 @@ Every render receives these automatically:
 | *shared data* | Any values added via `c.share(key, value)` in middleware |
 
 Values shared via `c.share()` in middleware are merged into every view's
-data automatically. See [Middleware: Sharing data](./middleware.md#sharing-data-with-views)
+context automatically. See [Middleware: Sharing data](./middleware.md#sharing-data-with-views)
 for details.
 
 `errors` and `old` are populated automatically after a `ValidationError`
-redirect. Use them to re-populate forms and render inline messages.
-
-In Blade:
-
-```html
-<input name="email"
-  value="{{ old('email') }}"
-  class="{{ errors.email ? 'is-invalid' : '' }}">
-
-@error('email')
-  <div class="form-error">{{ message }}</div>
-@enderror
-```
-
-In JSX:
+redirect. Use them to re-populate forms and render inline messages:
 
 ```jsx
-export default function LoginForm({ errors, old }) {
+import { useView } from 'foobarjs/jsx'
+
+export default function LoginForm() {
+  const { errors, old } = useView()
   return (
     <form method="post" action="/login">
       <input name="email" value={old ? old('email') : ''} />
@@ -278,122 +255,19 @@ export default function LoginForm({ errors, old }) {
 }
 ```
 
-The Blade `@error('field') ... @enderror` directive renders its body only when
-the field has one or more errors. Inside the block, a `message` local is bound
-to the first error message.
-
-## Blade template syntax
-
-### Variables
-
-```html
-<h1>{{ title }}</h1>
-<p>{{ product.description }}</p>
-```
-
-Variables are HTML-escaped. For raw output:
-
-```html
-{!! html_content !!}
-```
-
-### Layouts
-
-```html
-<!-- app/views/products/index.html -->
-@layout('layouts/app')
-
-@section('content')
-  <h1>Products</h1>
-  @foreach(products as product)
-    <div>{{ product.name }}</div>
-  @endforeach
-@endsection
-```
-
-```html
-<!-- app/views/layouts/app.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>@yield('title', 'My App')</title>
-</head>
-<body>
-  @yield('content')
-</body>
-</html>
-```
-
-### Conditionals
-
-```html
-@if(loggedIn)
-  <p>Welcome, {{ user.name }}</p>
-@else
-  <a href="/login">Login</a>
-@endif
-```
-
-### Loops
-
-```html
-@foreach(products as product)
-  <div>
-    <h3>{{ product.name }}</h3>
-    <p>${{ product.price }}</p>
-  </div>
-@endforeach
-```
-
-### Includes
-
-```html
-@include('components/product-card', { product })
-```
-
-### CSRF
+## CSRF
 
 foobarjs protects against CSRF at the middleware layer using an **origin check**
-(built-in CSRF middleware): unsafe requests (`POST`/`PUT`/`PATCH`/`DELETE`) must come from an
-allowed origin. Same-origin form submissions are accepted automatically, so
-forms need no per-request token — just submit them normally:
+(built-in CSRF middleware): unsafe requests (`POST`/`PUT`/`PATCH`/`DELETE`) must
+come from an allowed origin. Same-origin form submissions are accepted
+automatically, so forms need no per-request token — just submit them normally:
 
-```html
+```jsx
 <form method="POST" action="/posts">
-  <input name="title">
+  <input name="title" />
   <button type="submit">Save</button>
 </form>
 ```
-
-> The old `@csrf` directive has been removed. It emitted an inert hidden field
-> whose token was never populated; origin-based protection replaces it. If a
-> template still contains `@csrf` it now renders nothing, so you can delete it.
-
-## Blade components
-
-```html
-@component('alert', { type: 'success' })
-  Operation completed successfully!
-@endcomponent
-```
-
-Components live in `app/views/components/` and receive the passed data plus
-`{{ $slot }}` for the wrapped body.
-
-## Choosing between JSX and Blade
-
-| | JSX | Blade |
-|---|---|---|
-| **Syntax** | Standard JavaScript/JSX | `@` directives, `{{ }}` interpolation |
-| **Layouts** | Component composition with `children` | `@layout` / `@section` / `@yield` |
-| **Components** | Import and render directly | `@include` / `@component` |
-| **Raw HTML** | `raw()` from `hono/html` | `{!! expr !!}` |
-| **Type safety** | Full IDE support, autocomplete | String-based |
-| **Reuse** | Standard ES module imports | Template includes |
-
-Both engines work side-by-side. You can migrate incrementally — JSX files
-take priority over `.html` files with the same name, so drop in a `.jsx`
-replacement and the old template is bypassed automatically.
 
 ## Client-side interactivity
 

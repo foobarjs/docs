@@ -18,7 +18,7 @@ Middleware serves three jobs:
 | Job | Pattern | Example |
 |-----|---------|---------|
 | **Guard** | Check a condition, abort or redirect if it fails | Auth gate, role check, IP allowlist |
-| **Share** | Enrich the request with data for views | `c.share('cartCount', n)` — available in Blade and JSX via `useView()` |
+| **Share** | Enrich the request with data for views | `c.share('cartCount', n)` — available in JSX via `useView()` |
 | **Transform** | Modify the response on the way out | Cache headers, compression, timing |
 
 ## Writing middleware
@@ -86,7 +86,7 @@ Factories are **not auto-applied** — they must be used explicitly in routes or
 
 ## Sharing data with views
 
-Use `c.share(key, value)` in middleware to pass data to all views rendered during the request. Shared data is available in Blade templates as top-level variables and in JSX views via `useView()`.
+Use `c.share(key, value)` in middleware to pass data to all views rendered during the request. Shared data is available in JSX views via `useView()`.
 
 ```js
 // app/middlewares/CartShare.js
@@ -96,11 +96,6 @@ export default async function CartShare(c, next) {
   c.share('cartCount', cart.reduce((sum, item) => sum + (item.quantity || 0), 0))
   await next()
 }
-```
-
-In Blade:
-```html
-<a href="/cart">Cart ({{ cartCount }})</a>
 ```
 
 In JSX:

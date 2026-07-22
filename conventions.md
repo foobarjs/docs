@@ -37,12 +37,12 @@ Guiding principles:
 | `app/notifications/**/*.js` | Plain userland classes — imported explicitly where dispatched. No auto-discovery. |
 | `app/serializers/<model>.serializer.js` | Auto-looked-up per request by `autoSerialize(Model, data)`. Filename must match the lowercased model class name. |
 | `app/validators/**/*.js` | Plain userland classes — imported by `FormRequest` subclasses. No auto-discovery. |
-| `app/views/**/*.html` | Rendered via `this.render('folder/file')`. |
-| `app/views/layouts/*.html` | Convention only. Reference from templates via `@layout('layouts/app')`. |
-| `app/views/errors/*.html` | Auto-lookup for HTTP error rendering (see [Error handling](./error-handling.md)). |
-| `app/views/auth/*.html` | Optional user overrides for the auth plugin's login/register templates. If absent, foobarjs ships a self-contained default. |
-| `app/views/admin/*.html` | Optional user overrides for admin panel templates. |
-| `app/views/components/*.html` | Auto-lookup for `@component('name', ...)`. |
+| `app/views/**/*.jsx` | Rendered via `this.render('folder/file')`. |
+| `app/views/layouts/*.jsx` | Convention only. Import from your view components (`import App from '../layouts/App.jsx'`). |
+| `app/views/errors/*.jsx` | Auto-lookup for HTTP error rendering (see [Error handling](./error-handling.md)). |
+| `app/views/auth/*.jsx` | Optional user overrides for the auth plugin's login/register views. If absent, foobarjs ships a self-contained default. |
+| `app/views/admin/*.jsx` | Optional user overrides for admin panel views. |
+| `app/views/components/*.jsx` | Shared components — import them from your views. |
 | `routes/web.js` | Explicit route registration. Loaded after filename-convention routes. |
 | `routes/api.js` | Same shape as `web.js`. |
 | `config/*.js` | Auto-loaded by filename. Access via `foobar.configLoader.get('<file>.<key>')`. |
@@ -201,7 +201,7 @@ See [API](./api.md) and [Serialization](./serialization.md).
 - `FormRequest.authorize()` returning `false` → HTTP 403.
 - On a 422 for an HTML request, foobarjs redirects back and flashes
   `errors` and `old` into the session. Templates read them via
-  `errors.email` / `old('email')` / `@error('email') ... @enderror`.
+  `errors.email` / `old('email')` (both available through `useView()`).
   See [Views](./views.md#view-globals).
 - Field labels in error messages are auto-humanized:
   `first_name` / `firstName` → "First name".
@@ -215,17 +215,15 @@ See [Validation](./validation.md).
 - Rendered via `this.render('folder/file', data)`.
 - Template path is relative to `app/views/`, no extension. Both
   `products.index` (dotted) and `products/index` (slashed) work.
-- Extensions searched: `.html`, `.edge`, `.eta`.
-- **Auto-injected globals in every render:** `user`, `loggedIn`,
-  `cartCount`, `flash`, `errors`, `old`.
-- Errors view auto-lookup order: `errors/N.html` (exact) →
-  `errors/Nxx.html` → `errors/error.html` → `errors/500.html`
+- Extensions searched: `.jsx`, `.tsx`.
+- **Auto-injected globals in every render (read via `useView()`):** `user`,
+  `loggedIn`, `cartCount`, `flash`, `errors`, `old`.
+- Errors view auto-lookup order: `errors/N.jsx` (exact) →
+  `errors/Nxx.jsx` → `errors/error.jsx` → `errors/500.jsx`
   (5xx only) → built-in fallback / dev diagnostic page.
-- Directive processing order (matters for nesting): `@error` blocks →
-  loops (`@foreach`) → conditionals (`@if`) → variable interpolation.
-- Auth plugin renders `foobarjs/auth`'s bundled login/register templates
-  by default. Override by creating `app/views/auth/login.html` and/or
-  `app/views/auth/register.html`.
+- Auth plugin renders `foobarjs/auth`'s bundled login/register views
+  by default. Override by creating `app/views/auth/login.jsx` and/or
+  `app/views/auth/register.jsx`.
 
 See [Views](./views.md).
 

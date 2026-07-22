@@ -63,14 +63,6 @@ Forms that submit via POST/PUT/PATCH/DELETE need a CSRF token.
 </form>
 ```
 
-**In Edge views:**
-
-```html
-<form method="POST" action="/checkout">
-  {{ csrfField() }}
-</form>
-```
-
 ---
 
 ## `Body stream already consumed`

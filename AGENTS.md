@@ -88,7 +88,7 @@ MVC framework:
   Only methods that exist get routes.
 - **Models** extend `Model` (or `AuthenticableModel` for users) and declare
   `static schema = { field: Field.string()... }`.
-- **Views** are Edge-like HTML templates rendered via `this.render()`.
+- **Views** are JSX components rendered via `this.render()`.
 - **Admin panel** auto-generates CRUD UI from registered models.
 - **API** auto-generates REST endpoints and OpenAPI docs.
 

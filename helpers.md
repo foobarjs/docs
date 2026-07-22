@@ -302,7 +302,7 @@ async verify() {
 
 ## Url (`foobarjs/core`)
 
-Laravel-style URL builder — a thin façade over the [Uri](./routing.md#building-urls--the-uri-helper)
+Ergonomic URL builder — a thin façade over the [Uri](./routing.md#building-urls--the-uri-helper)
 fluent builder (for query manipulation) and [SignedUrl](#signedurl-foobarjscore)
 (for HMAC signing). Use it whenever you need an *absolute* URL, a URL for a
 *named route*, a safe "back" URL, or a signed URL.

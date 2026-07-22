@@ -308,10 +308,10 @@ async show() {
 HTML forms only support `GET` and `POST`. Use a hidden `_method` field for
 the other verbs:
 
-```html
-<form action="/products/{{ product.id }}" method="POST">
-  <input type="hidden" name="_method" value="PUT">
-  <!-- ... -->
+```jsx
+<form action={`/products/${product.id}`} method="POST">
+  <input type="hidden" name="_method" value="PUT" />
+  {/* ... */}
 </form>
 ```
 

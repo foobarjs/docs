@@ -203,7 +203,7 @@ Multiple ways to send a response back. Each has different behavior.
 
 | Method | Returns | When to use |
 |--------|---------|-------------|
-| `this.render(template, data)` | Rendered HTML from a Blade template | Server-rendered pages |
+| `this.render(template, data)` | Rendered HTML from a JSX view | Server-rendered pages |
 | `this.html(string)` | Raw HTML string | Inline HTML snippets, no template needed |
 | `this.json(data)` | JSON response | API endpoints, AJAX responses |
 | `this.json(data, status)` | JSON with status code | Error responses, 201 created |
@@ -635,7 +635,7 @@ try {
 
 ### Edge case: error views in production
 
-Create `app/views/errors/404.html` and `app/views/errors/500.html` for
+Create `app/views/errors/404.jsx` and `app/views/errors/500.jsx` for
 branded error pages. The view receives `status`, `message`, and `requestId`.
 
 **Foobar recommends:** Use `try/catch` only for `ValidationError` where you

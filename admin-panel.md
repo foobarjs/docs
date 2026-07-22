@@ -2,7 +2,7 @@
 
 # Admin Panel
 
-The `foobarjs/admin` plugin generates a full admin panel for all your models with zero configuration. It uses Bootstrap 5 with offline assets, Edge templates, and supports per-model customization, search, filters, bulk actions, and granular permissions.
+The `foobarjs/admin` plugin generates a full admin panel for all your models with zero configuration. It uses Bootstrap 5 with offline assets, JSX views, and supports per-model customization, search, filters, bulk actions, and granular permissions.
 
 ## Setup
 
@@ -536,24 +536,24 @@ registry.registerField('rich', 'admin.fields.rich')
 registry.registerColumn('sparkline', 'admin.columns.sparkline')
 ```
 
-Create the partials in `app/views/admin/fields/rich.html` and `app/views/admin/columns/sparkline.html`.
+Create the partials in `app/views/admin/fields/rich.jsx` and `app/views/admin/columns/sparkline.jsx`.
 
 ## Template Overrides
 
 Admin templates live in `foobarjs/admin/src/views/`. You can override any template by creating a file with the same path in `app/views/admin/`:
 
 ```
-app/views/admin/layout.html
-app/views/admin/dashboard.html
-app/views/admin/models/list.html
-app/views/admin/models/show.html
-app/views/admin/models/form.html
-app/views/admin/failed-jobs.html
-app/views/admin/components/flash.html
-app/views/admin/components/pagination.html
+app/views/admin/layout.jsx
+app/views/admin/dashboard.jsx
+app/views/admin/models/list.jsx
+app/views/admin/models/show.jsx
+app/views/admin/models/form.jsx
+app/views/admin/failed-jobs.jsx
+app/views/admin/components/flash.jsx
+app/views/admin/components/pagination.jsx
 ```
 
-The package templates use the same Edge directives as the rest of the framework (`@layout`, `@section`, `@yield`, `@foreach`, `@if`, `@include`).
+The package views are standard JSX components (default-exported function components) — override any of them by dropping a same-named `.jsx` file into `app/views/admin/`.
 
 ## System Group
 

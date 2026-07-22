@@ -74,24 +74,26 @@ Every view receives:
 }
 ```
 
-Example `app/views/errors/404.html`:
+Example `app/views/errors/404.jsx`:
 
-```html
-@layout('layouts.app')
+```jsx
+import App from '../layouts/App.jsx'
 
-@section('title'){{ status }} - Page Not Found@endsection
-
-@section('content')
-  <div class="error-page">
-    <h1>{{ status }}</h1>
-    <h2>{{ message || "Page Not Found" }}</h2>
-    <p>The page you're looking for doesn't exist.</p>
-    <a href="/">Go home</a>
-    @if(requestId)
-      <p style="font-family:monospace;font-size:11px;">Request ID: {{ requestId }}</p>
-    @endif
-  </div>
-@endsection
+export default function NotFound({ status, message, requestId }) {
+  return (
+    <App title={`${status} - Page Not Found`}>
+      <div class="error-page">
+        <h1>{status}</h1>
+        <h2>{message || 'Page Not Found'}</h2>
+        <p>The page you're looking for doesn't exist.</p>
+        <a href="/">Go home</a>
+        {requestId && (
+          <p style="font-family:monospace;font-size:11px;">Request ID: {requestId}</p>
+        )}
+      </div>
+    </App>
+  )
+}
 ```
 
 ## JSON Error Responses

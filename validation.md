@@ -209,31 +209,40 @@ returns `foo@x.com`.
 
 ## Accessing Errors in Views
 
-Two globals are injected on every render:
+Two globals are injected on every render and read via `useView()`:
 
 - `errors` — the flashed errors object (`{ field: ['msg', ...] }`)
 - `old(key, fallback = '')` — reads the previously-submitted value for `key`
 
-```html
-<input name="email" value="{{ old('email') }}" class="{{ errors.email ? 'is-invalid' : '' }}">
+```jsx
+import { useView } from 'foobarjs/jsx'
 
-@error('email')
-  <div class="form-error">{{ message }}</div>
-@enderror
+export default function LoginForm() {
+  const { errors, old } = useView()
+  return (
+    <form method="post" action="/login">
+      <input
+        name="email"
+        value={old('email')}
+        class={errors?.email ? 'is-invalid' : ''}
+      />
+      {errors?.email && <div class="form-error">{errors.email[0]}</div>}
+      <button type="submit">Sign in</button>
+    </form>
+  )
+}
 ```
 
-The `@error('field') ... @enderror` directive only renders its body when `errors[field]` has at least one message. Inside the block, a local `message` is defined and equals the first error message. You can still access `errors['field']` for the full array.
+`errors[field]` is an array of messages; render the first one inline, or list all of them:
 
-You can also iterate all errors:
-
-```html
-@if(Object.keys(errors).length > 0)
+```jsx
+{Object.keys(errors || {}).length > 0 && (
   <ul class="alert alert-danger">
-    @foreach(Object.entries(errors) as [field, messages])
-      <li>{{ field }}: {{ messages.join(', ') }}</li>
-    @endforeach
+    {Object.entries(errors).map(([field, messages]) => (
+      <li>{field}: {messages.join(', ')}</li>
+    ))}
   </ul>
-@endif
+)}
 ```
 
 ## Manual Validation

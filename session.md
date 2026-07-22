@@ -84,16 +84,20 @@ session.keep('success', 'error')
 
 ### Flash Messages in Views
 
-All views automatically receive a `flash` object containing any flashed messages:
+All views receive a `flash` object through `useView()` containing any flashed messages:
 
-```html
-@if(flash.success)
-  <div class="alert alert-success">{{ flash.success }}</div>
-@endif
+```jsx
+import { useView } from 'foobarjs/jsx'
 
-@if(flash.error)
-  <div class="alert alert-danger">{{ flash.error }}</div>
-@endif
+export default function Flash() {
+  const { flash } = useView()
+  return (
+    <>
+      {flash?.success && <div class="alert alert-success">{flash.success}</div>}
+      {flash?.error && <div class="alert alert-danger">{flash.error}</div>}
+    </>
+  )
+}
 ```
 
 Flashed messages are removed from the session after they are read once, so a reload of the target page will not show them again.

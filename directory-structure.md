@@ -9,7 +9,7 @@ my-app/
 ├── app/
 │   ├── controllers/       # Request handlers (extend Controller)
 │   ├── models/            # Active Record models (extend Model)
-│   ├── views/             # Templates (.html)
+│   ├── views/             # JSX views (.jsx / .tsx)
 │   │   ├── layouts/       # Layout templates
 │   │   └── errors/        # 404/403/500/419 overrides
 │   ├── admin/             # Admin panel resource configs
