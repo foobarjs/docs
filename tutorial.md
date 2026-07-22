@@ -28,9 +28,13 @@ Reading time: ~30 minutes.
 Run:
 
 ```bash
-npm install -g github:foobarjs/foobarjs#v0.3.1
+npm install -g git+https://github.com/foobarjs/foobarjs.git#v0.3.2
 foobar new links-app
 ```
+
+> **Note.** Installing from an HTTPS tarball is a stopgap until foobarjs is
+> published to npm — it works without any SSH keys or `git` configured on
+> the machine.
 
 `foobar new` will prompt for your first admin user (name, email, password),
 then write the skeleton, install dependencies, seed the schema, and create
@@ -62,7 +66,7 @@ files and reloads on save.
 Generate it:
 
 ```bash
-foobar g model link -f title:string,url:string,clicks:number
+foobar g model link -f "title:string:required:minLength=2,url:string:required:url,clicks:number:unsigned:default=0"
 ```
 
 Output:
@@ -71,7 +75,8 @@ Output:
 ✓ Created model: app/models/link.model.js
 ```
 
-Open `app/models/link.model.js` and replace it with:
+That produces exactly the model we want — the `-f` DSL accepts chainable
+modifiers separated by colons, so no manual editing is needed:
 
 <!-- app/models/link.model.js -->
 ```js
@@ -90,7 +95,7 @@ class Link extends Model {
 export default Link
 ```
 
-Save the file. Because `foobar serve --dev` is watching, the framework
+Because `foobar serve --dev` is watching, the framework
 restarts and syncs the schema for you — you'll see a `links` table
 created in the console output. No `db:sync` command needed.
 
@@ -133,7 +138,7 @@ class LinksController extends Controller {
   static auth = false
 
   async index() {
-    const links = await Link.orderBy('created_at', 'desc').get()
+    const links = await Link.orderBy('createdAt', 'desc').get()
     return this.render('links/index', { links })
   }
 
@@ -261,7 +266,7 @@ class LinksController extends Controller {
   static auth = false
 
   async index() {
-    const links = await Link.orderBy('created_at', 'desc').get()
+    const links = await Link.orderBy('createdAt', 'desc').get()
     return this.render('links/index', { links })
   }
 
@@ -276,16 +281,7 @@ class LinksController extends Controller {
   }
 
   async store() {
-    let request
-    try {
-      request = await this.validate(CreateLinkValidator)
-    } catch (err) {
-      if (err.name === 'ValidationError') {
-        return this.back().withErrors(err).withInput(err.input)
-      }
-      throw err
-    }
-
+    const request = await this.validateOrBack(CreateLinkValidator)
     const link = await Link.create(request.validated())
     this.flash('success', `Saved "${link.title}".`)
     return this.redirect(`/links/${link.id}`)
@@ -353,11 +349,19 @@ export default function LinkNew() {
 
 Visit <http://localhost:3000/links/new>, submit an empty form, and watch
 the validation errors render. Submit a real URL — you get redirected to the
-show page, `clicks` defaulted to `0`, `created_at` set.
+show page, `clicks` defaulted to `0`, `createdAt` set.
 
 `useView()` pulls per-request bag data set by `withErrors` / `withInput`.
 `old(name)` returns the previous submission so the user isn't retyping
 after a validation failure.
+
+> **CSRF and curl.** `POST /links` above is a WEB route (registered in
+> `routes/web.js` / auto-mounted from the controller), so CSRF's
+> Origin/Referer check applies. To POST to a web route from curl, include
+> `-H "Origin: http://localhost:3000"`. API routes (`routes/api.js`,
+> `/api/*`) have CSRF **off** by default in v0.3.2, so `curl -X POST
+> http://localhost:3000/api/links -d '{...}'` just works without any
+> Origin header.
 
 ## 8. Use the API
 
@@ -384,10 +388,10 @@ Output:
 ```json
 {
   "data": [
-    { "id": 2, "title": "Hacker News", "url": "https://news.ycombinator.com", "clicks": 0, "created_at": "...", "updated_at": "..." },
-    { "id": 1, "title": "foobarjs docs", "url": "https://foobarjs.github.io/docs", "clicks": 0, "created_at": "...", "updated_at": "..." }
+    { "id": 2, "title": "Hacker News", "url": "https://news.ycombinator.com", "clicks": 0, "createdAt": "...", "updatedAt": "..." },
+    { "id": 1, "title": "foobarjs docs", "url": "https://foobarjs.github.io/docs", "clicks": 0, "createdAt": "...", "updatedAt": "..." }
   ],
-  "meta": { "currentPage": 1, "perPage": 25, "total": 2, "lastPage": 1 }
+  "meta": { "currentPage": 1, "perPage": 15, "total": 2, "lastPage": 1 }
 }
 ```
 
