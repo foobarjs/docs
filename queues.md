@@ -37,6 +37,80 @@ plugin when the driver is `database` — you don't declare them yourself. The
 failed jobs in `failed_queues:<queueName>`. Redis requires `foobarjs/redis`
 and a running server.
 
+## Redis driver (v0.6.0+)
+
+Use Redis for multi-process workers, background daemons, or when jobs
+must survive a restart. Batteries-included pick: **in-memory `sync`
+driver is fine for dev and single-process apps; `database` works for
+low-throughput jobs; use `redis` for real background workers.**
+
+### Prerequisites
+
+```bash
+# macOS
+brew services start redis
+# One-off npm install (ioredis is an optional dependency)
+npm install ioredis
+```
+
+### Config
+
+Pick `redis` as the default driver:
+
+```js
+// config/queue.js
+export default {
+  default: 'redis',
+  connections: {
+    redis: {
+      driver: 'redis',
+      connection: 'default',   // key in config/redis.js
+      visibilityTimeout: 60,   // seconds a claimed job may sit before rescue
+    },
+  },
+}
+```
+
+### Semantics
+
+- **Reliable pop.** Workers pop with `BRPOPLPUSH` from `queues:<name>`
+  into `queues:<name>:processing`. A killed worker doesn't drop the
+  job — it stays in the processing list.
+- **Visibility timeout / stuck-job sweep.** On each pop, entries in
+  `:processing` older than `visibilityTimeout` seconds are moved back
+  to the main queue for re-processing. Set higher than your longest
+  expected job runtime.
+- **Delayed dispatch.** `Queue.later(delayMs, JobClass, args)` writes
+  to `queues:<name>:delayed` (a ZSET). Any worker that polls promotes
+  due entries into the main list — no separate scheduler process
+  required.
+- **Retries + failures.** On exception, `attempts` is incremented and
+  the job is released back onto the queue with delay = `--sleep`. When
+  `attempts >= tries` the job moves to `failed_queues:<name>` (a
+  bounded LIST, last 1000). Inspect with `Queue.failed('default')`,
+  retry with `Queue.retryFailed('default')`, wipe with
+  `Queue.flushFailed('default')`.
+- **Graceful shutdown.** The worker installs SIGTERM/SIGINT handlers
+  that let the in-flight job finish, ack it, then exit.
+
+### Worker
+
+```bash
+foobar queue:work --queue=default --tries=3
+```
+
+Run several worker processes for parallelism — Redis guarantees each
+job is claimed by exactly one worker (BRPOPLPUSH is atomic).
+
+### When to use which driver
+
+| Driver     | Persists across restart | Multi-process workers | Extra infra |
+|------------|-------------------------|-----------------------|-------------|
+| `sync`     | n/a (runs inline)       | n/a                   | none        |
+| `database` | yes                     | yes (rows locked)     | your DB     |
+| `redis`    | yes                     | yes                   | Redis 5+    |
+
+
 ## Redis Connection
 
 When using the Redis driver, also create `config/redis.js`:
