@@ -102,6 +102,29 @@ const hash = Crypto.hashPassword('user-password')
 const match = Crypto.verifyPassword('user-password', hash)  // true
 ```
 
+## Global auth default (`config('auth.default')`)
+
+The `auth.default` config key controls the ambient authentication policy
+applied to routes discovered from `routes/*.js` and to auto-mounted API
+resources:
+
+| Value | Effect |
+|-------|--------|
+| `'auth'` (default in v0.4.0+) | Framework prepends the `'auth'` middleware globally. Routes must explicitly opt out with `.public()` / `.withoutMiddleware(['auth'])`. |
+| `'public'` | No default guard. Routes must opt in per-resource / per-controller with `middleware: ['auth']`. |
+
+```js
+// config/auth.js
+export default {
+  default: 'auth',   // v0.4.0 default
+  loginRateLimit: { max: 5, windowMs: 60000 },
+}
+```
+
+> **Deprecated in v0.4.0**: `config('auth.guard', 'required' | 'optional')`
+> is still accepted (with a boot warning) but read as
+> `auth.default: 'auth' | 'public'`. Remove in v0.5.0.
+
 ## Auth Middleware
 
 Protect routes by importing and applying middleware classes from `foobarjs/auth`:
@@ -109,6 +132,7 @@ Protect routes by importing and applying middleware classes from `foobarjs/auth`
 | Middleware | Description |
 |------------|-------------|
 | `'auth'` (alias for `RequireAuthMiddleware`) | Redirects to `/login` if not authenticated (returns 401 JSON for API requests) |
+| `'tokenOnly'` (alias for `RequireTokenMiddleware`) | Rejects with 401 unless the request carries a resolved Bearer token — session-only users are refused |
 | `GuestMiddleware` | Redirects to `/` if already authenticated |
 
 ### On a controller

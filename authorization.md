@@ -315,6 +315,32 @@ The gate is checked after authentication middleware and model binding. If the ch
 
 > **Note:** `.can()` requires an authenticated user. If no user is present (e.g. on a public route), foobarjs throws an `AuthenticationError` (HTTP 401).
 
+### Gates auto-apply on both admin and API
+
+Any Model that has a registered Gate (`app/gates/*.gate.js`) is automatically
+checked on both the admin panel and the auto-mounted API. The API plugin maps
+each REST verb to a gate action:
+
+| REST verb | Gate action |
+|-----------|-------------|
+| `index`   | `viewAny`   |
+| `show`    | `view`      |
+| `store`   | `create`    |
+| `update`  | `update`    |
+| `destroy` | `delete`    |
+
+Attach additional or custom gates with the fluent `.can()` on the resource:
+
+```js
+Api.resource(Order)
+  .can('refund', Order, 'update')   // extra gate on PUT/PATCH only
+```
+
+**Gates fire only when there is a user.** For `.public()` verbs no user is
+resolved, so the API skips the gate entirely — the same request on the same
+model returns data anonymously when public and enforces the gate as soon as a
+user is present.
+
 ## Roles
 
 ### `hasRole()`

@@ -33,9 +33,10 @@ The URL segment is the model's `getTableName()`. `Product` → `/api/products`,
 
 ## Authentication
 
-**The API is **public by default**.** Out of the box every endpoint is
-unauthenticated (`auth: false`), so registering `foobarjs/api` exposes your
-data publicly unless you add authentication explicitly.
+**The API requires authentication by default (v0.4.0+).** Auto-mounted
+resources are wrapped with the `'auth'` middleware — an unauthenticated
+request returns `401`. Opt individual resources (or specific verbs) out
+with `.public()`.
 
 Authentication is resolved by the `foobarjs/auth` plugin, which must be
 registered **before** `foobarjs/api`:
@@ -49,64 +50,90 @@ export default {
 
 `foobarjs/auth` populates the current user from either a session cookie or an
 `Authorization: Bearer <token>` header (see
-[Authentication](./authentication.md)); the API gate just requires one to be
-present. Clients obtain a Bearer token by posting credentials to
-`POST /api/auth/token` and inspect the current user with
-`GET /api/auth/me` (see [Authentication](./authentication.md#api-login-endpoint)).
+[Authentication](./authentication.md)). Clients obtain a Bearer token by
+posting credentials to `POST /api/auth/token` and inspect the current user
+with `GET /api/auth/me`.
 
-### Access rules
+### The two-verb model
 
-Configure access in `config/api.js`. Config values override the plugin defaults:
+Every API resource is configured with just two verbs plus a gate helper:
+
+- `.middleware(list, ...verbs?)` — attach middleware to specific verbs (or all if no verbs given).
+- `.public(...verbs?)` — sugar for `.withoutMiddleware(['auth'], ...verbs)`. No args = whole resource public.
+- `.withoutMiddleware(list, ...verbs?)` — remove named middleware (mirrors the route builder).
+- `.can(action, Model, ...verbs?)` — attach gate middleware.
+
+Verbs are the five REST actions: `index`, `show`, `store`, `update`, `destroy`.
+
+### Global default
+
+Set `auth.default` in `config/auth.js` to control the ambient policy:
 
 ```js
-// config/api.js
+// config/auth.js
 export default {
-  // Storefront catalog: anyone can read, only authenticated users can write.
-  auth: { read: false, write: 'session' },
-
-  // Per-resource overrides, keyed by model name.
-  models: {
-    User: 'session',
-    PersonalAccessToken: 'session',
-  },
+  default: 'auth',    // Auto-mount is auth-required (this is the v0.4.0 default)
+  // default: 'public',  // Auto-mount is fully public (old v0.3.x behavior)
 }
 ```
 
-A rule can be:
-
-| Rule | Meaning |
-|------|---------|
-| `'session'` / `true` / `'any'` | Require any authenticated user (session cookie **or** Bearer token) |
-| `'token'` | Require a Bearer personal access token specifically |
-| `false` / `'public'` / `'none'` | Public — no authentication |
-| `{ read, write }` | Different rules for reads (`GET`) vs writes (`POST`/`PUT`/`DELETE`) |
-
-Resolution precedence (most specific wins):
-
-1. `.middleware('auth')` on `Api.resource(Model)`
-2. `.auth()` on `Api.resource(Model)`
-3. `models[ModelName]` in `config/api.js`
-4. the top-level `auth` option (default: `false`)
-
-The gate **fails closed**: if `foobarjs/auth` is not registered there is never a
-current user, so every non-public rule rejects with `401`.
-
-> **Gate enforcement:** Authenticated API models must have a registered gate. If no gate exists for an authenticated model, the API returns `403 Forbidden`. Public endpoints (`auth: false`) bypass gate checks.
+### Per-resource opt-out
 
 ```js
-// Per-resource auth via Api.resource
+// app/api/pricing.api.js — a public catalog endpoint
 import { Api } from 'foobarjs/api'
-import AuditLog from '../models/audit-log.model.js'
+import Pricing from '../models/pricing.model.js'
 
-export default Api.resource(AuditLog)
-  .middleware('auth')   // this resource requires authentication
+export default Api.resource(Pricing).public()
 ```
 
-A request that fails its rule gets HTTP `401`:
+```js
+// app/api/order.api.js — reads are public, writes require auth
+import { Api } from 'foobarjs/api'
+import Order from '../models/order.model.js'
 
-```json
-{ "error": "Unauthenticated" }
+export default Api.resource(Order)
+  .public('index', 'show')                 // GET routes are open
+  .middleware('auth', 'store', 'update', 'destroy')  // writes require login
+  .can('refund', Order, 'update')          // extra gate on writes
 ```
+
+```js
+// app/api/analytics.api.js — bearer token only
+import { Api } from 'foobarjs/api'
+import AnalyticsEvent from '../models/analytics-event.model.js'
+
+export default Api.resource(AnalyticsEvent)
+  .middleware('tokenOnly')  // rejects session-only users; requires a bearer token
+```
+
+### Why auth-required by default
+
+Prior to v0.4.0 auto-mount was public. That default silently exposed any
+model added to `app/models/` on the first request. Under the new default a
+new model is invisible until its owner explicitly opts it out with
+`.public()` — the safe direction to fail.
+
+### Deprecated shapes (removal: v0.5.0)
+
+| Deprecated | Replacement |
+|------------|-------------|
+| `ApiResource.auth('session')` / `.auth(true)` / `.auth('auth')` | `.middleware('auth')` |
+| `ApiResource.auth('token')` | `.middleware('tokenOnly')` |
+| `ApiResource.auth('public')` / `.auth(false)` / `.auth('none')` | `.public()` |
+| `ApiResource.auth({ read, write })` | Split into `.public('index','show')` / `.middleware('auth','store','update','destroy')` |
+| `config('api.auth')` | `config('auth.default')` + per-resource opt-outs |
+| `config('api.models')` | Per-resource `.public()` / `.middleware()` in `app/api/*.api.js` |
+| `config('auth.guard', 'required')` | `config('auth.default', 'auth')` |
+| `config('auth.guard', 'optional')` | `config('auth.default', 'public')` |
+| `static auth = false` on a Controller | `static withoutMiddleware = ['auth']` |
+
+Each deprecated shape is still accepted for the v0.4.x release and emits
+a boot-time warning naming the offending resource or config key.
+
+> **Gate enforcement:** Gates auto-fire on both admin and API for models
+> with a registered gate. Gates only run when there is an authenticated
+> user — for public routes the API skips the gate entirely.
 
 ## Per-Resource Configuration (Api.resource)
 
@@ -119,7 +146,7 @@ import Order from '../models/order.model.js'
 
 export default Api.resource(Order)
   .middleware('auth')                      // protect this resource
-  .only(['index', 'show', 'store'])       // only these routes
+  .only('index', 'show', 'store')          // only these routes
   .fillable(['name', 'status', 'total'])   // writable fields (POST/PUT)
   .hidden(['internal_notes', 'cost'])      // stripped from responses
   .filterable(['status', 'total'])         // allowed filter[field] params
@@ -127,7 +154,7 @@ export default Api.resource(Order)
   .includable(['items', 'customer'])       // allowed include relations
   .perPage(50)                             // default page size
   .maxPerPage(200)                         // max allowed page size
-  .auth({ read: false, write: 'token' })
+  .public('index', 'show')                 // GETs are public; writes still require auth
 ```
 
 ### Configuration Options
@@ -143,8 +170,10 @@ export default Api.resource(Order)
 | `includable(relations)` | Only these relations can be eager loaded with `?include=` |
 | `perPage(n)` | Default page size for this resource |
 | `maxPerPage(n)` | Maximum allowed `?perPage=` value |
-| `middleware(name)` | Add middleware (e.g. `'auth'`) to this resource's routes |
-| `auth(rule)` | Auth rule for this resource. Accepts the same values as `config/api.js` auth. |
+| `middleware(list, ...verbs?)` | Attach middleware to all verbs (no verb args) or the given verbs |
+| `public(...verbs?)` | Sugar for `withoutMiddleware(['auth'], ...verbs)`; makes the whole resource (or specific verbs) unauth |
+| `withoutMiddleware(list, ...verbs?)` | Remove named middleware from the resolved chain |
+| `can(action, Model, ...verbs?)` | Attach gate middleware; verbs restrict application |
 
 ### Route filtering
 
@@ -174,12 +203,12 @@ Api.resource(User)
 
 ### Auth precedence
 
-When `Api.resource()` is configured, precedence is:
+The chain is composed at boot in this order:
 
-1. `Api.resource(Model).middleware('auth')` — per-resource middleware
-2. `Api.resource(Model).auth(...)` — per-resource config file
-3. `config/api.js` → `models[ModelName]` — global per-model override
-4. `config/api.js` → `auth` — global default (`false`)
+1. Global `auth.default` — prepends `'auth'` unless the resource marks the verb public.
+2. Per-resource `.middleware(list, ...verbs)` — appended in registration order.
+3. Per-resource `.can(action, Model, ...verbs)` — gate middleware appended after `.middleware()`.
+4. `.public(...verbs)` / `.withoutMiddleware(['auth'], ...verbs)` — removes the default `'auth'` entry from the target verbs only.
 
 ### Discovery
 
