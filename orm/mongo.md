@@ -53,9 +53,13 @@ foobarjs treats MongoDB as one of MikroORM's supported drivers — same
 connection registry. Two ways to use it:
 
 **Whole-app mongo** — set `database.driver: 'mongodb'` in
-`config/database.js`. Every model lives in mongo. Verified as of
-v0.5.1: `Db.boot()` bootstraps the mongo schema (ObjectId `_id` with
-serialized `id`), and CRUD + query round-trip through the public API.
+`config/database.js`. Every model lives in mongo. Dogfooded end-to-end
+against the reference demo app (event catalog, checkout with attendee
+creation, admin dashboard with widget aggregates, list/show/edit/custom
+actions across 7 resources, JSON API, organizer dashboard) as of
+**v0.5.3**. Two demo-side assumptions surfaced (numeric-typed
+FormRequest rules for ids; `Model.transaction` semantics on standalone
+mongod) — both documented under Known limitations below.
 
 **Named connection** — leave the default on SQL/SQLite, opt specific
 models into mongo via `static connection = 'audit'` on the Model
@@ -280,6 +284,21 @@ Not needed:
 
 ## Known limitations
 
+- **`Model.transaction()` on standalone mongod.** MongoDB transactions
+  require a replica set (or mongos). Against a standalone `mongod` — the
+  common dev setup — `em.transactional` throws before the callback commits.
+  The framework detects this once per connection and transparently
+  re-runs the callback without a session, so `Model.transaction(...)` on
+  mongo becomes a best-effort wrapper (writes execute sequentially, no
+  atomicity). If you need cross-write atomicity on mongo, run a replica
+  set (e.g. `run-rs` or Atlas) — the framework will pick up transactional
+  semantics automatically.
+- **`.distinct()` row-dedup is JS-side on mongo.** With no argument,
+  `.distinct()` dedups fetched models in JS via `JSON.stringify(model)`.
+  Models with non-serializable state (custom getters returning symbols,
+  circular refs, functions) may dedup incorrectly. The field-list form
+  `.distinct(col).pluck(col)` uses MikroORM's native `Collection.distinct`
+  and matches SQL semantics exactly — prefer it when you can.
 - **Cross-connection through-aggregates are per-hop, not one pipeline.**
   `AuditLog` (mongo) with `.withCount('user.actions')` where `User` is
   on SQL runs two round trips: the mongo hop through the mongo adapter,
