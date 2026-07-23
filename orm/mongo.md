@@ -102,21 +102,21 @@ dashboard 500s.
 ### Through-aggregates
 
 `.withCount('orders')`, `.withSum('events.orders', 'total')`, and the
-whole dotted-path aggregate family use hand-written SQL fragments via
-`mikroRaw` for the grouped subqueries. Not usable on mongo. The admin
-uses `.withCount(...)` for detail-page relation badges — those would
-throw too.
+whole dotted-path aggregate family route through
+`MongoAdapter.runWithCount` / `runWithAggregate` for mongo-connected
+related models — a single `$match + $group` per hop. Dotted paths
+walk hops one at a time and use each hop's own adapter, so a mixed
+SQL/mongo path Just Works (same shape as the SQL side's IN-batched
+bridges). ✅
 
-### Relation loading (IN-batched, but currently SQL-only)
+### Relation loading
 
-The eager-load pattern is mongo-friendly (`$in`) but the terminal
-execution uses `em.createQueryBuilder(...)`. `.with('event')` on a
-mongo-connected model with a mongo-connected `Event` will throw.
-
-**Cross-connection eager loading (mongo model → SQL model, or the
-reverse)** is a design-level "should work" — but the current
-implementation's SQL-side path doesn't know to route the mongo hop
-through mongo primitives. Deferred until `MongoAdapter` lands.
+`.with('rel')` on a mongo-connected related model routes through
+`MongoAdapter.runIn` (hasMany/hasOne/belongsTo) or `runBelongsToMany`
+(m:m pivots). IN-batched hydration with `$in` filters — the same
+pattern the SQL side uses. Cross-connection eager loading (mongo
+model → SQL model or the reverse) works — the dispatch checks the
+RelatedModel's connection, not the parent's. ✅
 
 ### `foobar db:sync`, `foobar db:make`, `foobar db:migrate`
 
@@ -227,33 +227,41 @@ class AuditLog extends Model {
 SQLite. No cross-engine JOIN needed — because the framework doesn't
 emit JOINs.
 
-## Roadmap — MongoAdapter
+## MongoAdapter (implementation)
 
-The "admin works on mongo" story lands as a `framework/src/orm/mongo/
-MongoAdapter.js` module. Same pattern as this doc's escape-hatch
-symmetry: **compose over MikroORM, don't extend or monkey-patch it.**
+The "admin works on mongo" story ships as `framework/src/orm/mongo/
+MongoAdapter.js`. Same pattern as this doc's escape-hatch symmetry:
+**compose over MikroORM, don't extend or monkey-patch it.**
 
 The adapter holds a reference to MikroORM's EntityManager and exposes
-framework-native query methods:
+framework-native query methods, one per SQL code path the
+`RelationQueryBuilder` used to hardcode:
 
 | Method | Implementation |
 |---|---|
-| `runAggregate('count', col)` | `em.getCollection().countDocuments(where)` |
+| `runAggregate('count', col)` | `em.getConnection().countDocuments(where)` |
 | `runAggregate('sum'|'avg'|'min'|'max', col)` | `em.aggregate([$match, $group])` |
 | `runExists(where)` | `countDocuments(where, {limit:1}) > 0` |
 | `runGroupedAggregate(col, kind)` | `em.aggregate([$match, $group: {_id: '$col', value: ...}])` |
-| `runDateBucketAggregate(dateCol, bucket, kind)` | `em.aggregate([$match, $group: {_id: {$dateTrunc: {date: '$col', unit: 'day'}}, value: ...}])` |
+| `runDateBucketAggregate(dateCol, bucket, kind)` | `em.aggregate([$match, $group])` + JS bucket-label rollup |
 | `runIn(entity, fkCol, ids, opts)` | `em.find(entity, {[fkCol]: {$in: ids}}, opts)` |
-| `runPaginated(where, opts)` | `em.find(entity, where, {limit,offset})` + `countDocuments(where)` |
-| `translateConditions(conditions)` | Framework's `_conditions` op codes → mongo filter shape |
+| `runBelongsToMany(pivotColl, parentKey, ids)` | `em.getCollection(pivot).find({[parentKey]: {$in: ids}})` |
+| `runWithCount(fkCol, parentIds)` | `em.aggregate([$match, $group: {_id: '$fkCol', count: {$sum: 1}}])` |
+| `runWithAggregate(fkCol, parentIds, kind, col)` | `em.aggregate([$match, $group: {_id, agg}])` |
 
-When it lands:
+The `RelationQueryBuilder` dispatches per-model: on each terminal call
+that touches a related model, it checks the RelatedModel's connection
+and picks the SQL or mongo branch. Cross-engine relations (SQL parent
+with a mongo child, or vice versa) route each hop through its own
+adapter — no single pipeline crosses engines.
 
-- Widget aggregates, trend/chart widgets, and dashboard cards work on
-  mongo-connected models.
-- Relation loading (`.with('rel')`) works.
-- Through-aggregates (`.withCount('rel')`) will be added in a
-  follow-up; degrades to zero in the meantime.
+### Dotted-path aggregates
+
+`.withCount('events.orders.attendees')` walks each hop separately and
+uses the adapter of that hop's model. A three-hop path is three
+round trips regardless of connection type — same shape as the SQL
+path's IN-batched hops. No `$lookup` pipelines and no cross-engine
+JOINs.
 
 Not needed:
 
@@ -266,10 +274,13 @@ Not needed:
 
 ## Known limitations
 
-- **Cross-connection through-aggregates.** `AuditLog` (mongo) with
-  `.withCount('user.actions')` where `User` is on SQL — the pipeline
-  can't hop engines mid-aggregation. Would require the framework to
-  run separate aggregates per hop and stitch in JS. Deferred.
+- **Cross-connection through-aggregates are per-hop, not one pipeline.**
+  `AuditLog` (mongo) with `.withCount('user.actions')` where `User` is
+  on SQL runs two round trips: the mongo hop through the mongo adapter,
+  the SQL hop through the SQL path. No single aggregation pipeline
+  crosses engines — that would require a distributed query planner.
+  For typical cardinalities this is fine; for wide fan-out at each hop
+  consider denormalizing.
 - **No cross-engine transactions.** MikroORM's transaction contexts
   are per-connection. If you write to both a SQL model and a mongo
   model in one action, they're two independent operations; if one
