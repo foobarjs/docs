@@ -14,15 +14,20 @@ compatible with document databases — most notably by never emitting
 JOINs. Relationships load via IN-batched hydration, not JOINs; that
 one design decision is what makes MongoDB support tractable at all.
 
-That said, **the framework is not fully mongo-ready today.** The ORM's
-aggregate and relation-execution code paths currently use MikroORM's
-SQL query builder (`em.createQueryBuilder`) which the mongo driver
-doesn't expose. This page describes what works now, what breaks, why,
-and the escape hatches that let you drop below the framework for
-mongo-native operations.
+As of **v0.5.1**, the framework's terminal query methods dispatch
+through a `MongoAdapter` on mongo-connected models. `Model.query()`,
+`.first()`, `.get()`, `.paginate()`, `.pluck()`, `.value()`,
+`.updateAll()`, `.deleteAll()`, `.with(...)`, `.withCount / withSum /
+withAvg / withMin / withMax / withExists` (including dotted-path
+through-aggregates), `.has() / doesntHave() / whereHas /
+whereDoesntHave`, and the widget aggregate primitives all work on
+mongo. `Db.boot()` bootstraps a mongo-driven connection end-to-end.
 
-The full "make admin work on mongo" story ships as a follow-up under
-the `MongoAdapter` module (see the roadmap section below).
+A handful of SQL-only escape hatches (`.toSQL()`, `.getQueryBuilder()`,
+`.whereRaw()`, `.whereColumn()`, `.cursor()` via `qb.stream()`,
+`.cursorPaginate()`, `.select()` projections, `.distinct()`) still
+throw with a pointer to `.getCollection()` — see below for the mongo
+equivalents.
 
 ---
 
@@ -33,13 +38,14 @@ foobarjs treats MongoDB as one of MikroORM's supported drivers — same
 connection registry. Two ways to use it:
 
 **Whole-app mongo** — set `database.driver: 'mongodb'` in
-`config/database.js`. Every model lives in mongo. Currently limited
-(see What works / What breaks below).
+`config/database.js`. Every model lives in mongo. Verified as of
+v0.5.1: `Db.boot()` bootstraps the mongo schema (ObjectId `_id` with
+serialized `id`), and CRUD + query round-trip through the public API.
 
-**Named connection** (recommended today) — leave the default on
-SQL/SQLite, opt specific models into mongo via `static connection =
-'audit'` on the Model class. The rest of the app stays on the SQL
-path; only the mongo-connected model uses the mongo primitives.
+**Named connection** — leave the default on SQL/SQLite, opt specific
+models into mongo via `static connection = 'audit'` on the Model
+class. Both engines coexist and cross-connection eager loading works
+(each hop uses its own connection's adapter).
 
 ## Why the ORM design is mongo-compatible in principle
 
@@ -57,66 +63,52 @@ path; only the mongo-connected model uses the mongo primitives.
   with `WHERE id IN (…)`, stitch in JS. Two round trips, two engines,
   one relation.
 
-## What works today (via MikroORM's mongo primitives)
+## What works today (via MikroORM + MongoAdapter)
 
-Around 80% of the admin surface. Verified by tracing every callsite:
+Verified by parity tests under `framework/test/orm/mongo/parity/`:
 
 - Basic CRUD — `Model.find(id)`, `.findOrFail(id)`, `item.save()`,
-  `item.delete()`, `item.forceFill()`. Route via `em.findOne` /
-  `em.persist` / `em.remove`.
-- Filters — `where(col, op, val)`, `whereIn`, `whereNull`,
-  `whereNotNull`, `orWhere`. MikroORM's op map (`$eq`, `$in`, `$gte`,
-  `$like`, `$exists`) translates all of these on the mongo driver.
-- Ordering, limit, offset.
-- Basic pagination (`paginate(perPage)`) — two calls under the hood,
-  works on mongo.
-- Eager loading (`.with('rel')`) via MikroORM's `populate` option —
-  works.
+  `item.delete()`, `item.forceFill()`.
+- Filters — `where(col, op, val)`, `whereIn`, `whereNotIn`,
+  `whereBetween`, `whereNotBetween`, `whereNull`, `whereNotNull`,
+  `orWhere`, nested `where(callback)` blocks.
+- Ordering, limit, offset, take/skip, `latest()`, `oldest()`,
+  `reorder()`.
+- Pagination — `.paginate(page, perPage).get()` returns `{data, meta}`
+  with `total`, `lastPage`, `from`, `to`.
+- Terminal reads — `.first()`, `.get()`, `.pluck(col)`, `.value(col)`,
+  `.findBy(col, val)`, `.findMany(ids)`.
+- Bulk writes — `.updateAll(patch)` (native update), `.deleteAll()`
+  (native delete), soft-delete via `deleted_at`.
+- Eager loading — `.with('rel')` for belongsTo / hasMany / hasOne /
+  belongsToMany (pivot collections). Nested subrelations work.
+- Through-aggregates — `.withCount / withSum / withAvg / withMin /
+  withMax / withExists`, one-hop and dotted-path (e.g.
+  `.withSum('events.orders', 'total')`).
+- Constraint callbacks — `.withCount('orders', q => q.where(...))`,
+  `.whereHas('rel', q => ...)`, `.has()`, `.doesntHave()`.
+- Widgets — `Widget.value / count / sum / avg / min / max / exists /
+  trend / chart({bucket|groupBy})`. All route through the adapter.
+- Admin dashboard — the dashboard's `Model.query().count()` sweep works
+  on mongo-connected models.
 
-Because these primitives all work, the admin's list, show, create,
-edit, delete flows work on a mongo-backed model **as long as the
-model has no admin widgets or trend charts pointing at it.**
+## What still throws (SQL-only escape hatches by design)
 
-## What breaks today (SQL-only code paths)
+These are SQL-only escape hatches with no direct mongo equivalent.
+Each throws a helpful error pointing at `.getCollection()`.
 
-Every one of these routes through `em.createQueryBuilder(...)` — the
-SQL query builder that doesn't exist on MikroORM's mongo driver.
-
-### Widgets
-
-| Widget | Status | Why |
+| Method | Why | Mongo alternative |
 |---|---|---|
-| `Widget.value(name, resolver)` | ✅ works | Arbitrary user code; whatever the resolver does |
-| `Widget.count(name, Model)` | ✅ works | Routes through `MongoAdapter.runAggregate` → `countDocuments` |
-| `Widget.sum/avg/min/max` | ✅ works | Routes through `MongoAdapter.runAggregate` → `em.aggregate` |
-| `Widget.exists` | ✅ works | Routes through `MongoAdapter.runExists` → `countDocuments(..., {limit:1})` |
-| `Widget.trend(...)` (bucketed) | ✅ works | Routes through `MongoAdapter.runDateBucketAggregate` |
-| `Widget.chart({bucket})` | ✅ works | Same bucketing code path |
-| `Widget.chart({groupBy})` (no bucket) | ✅ works | Routes through `MongoAdapter.runGroupedAggregate` |
-
-The framework's own dashboard rendering at `AdminController.js:103`
-runs `Model.query().count()` for every model with `adminConfig.dashboard =
-true`. On a mongo-connected model, that first count throws — the
-dashboard 500s.
-
-### Through-aggregates
-
-`.withCount('orders')`, `.withSum('events.orders', 'total')`, and the
-whole dotted-path aggregate family route through
-`MongoAdapter.runWithCount` / `runWithAggregate` for mongo-connected
-related models — a single `$match + $group` per hop. Dotted paths
-walk hops one at a time and use each hop's own adapter, so a mixed
-SQL/mongo path Just Works (same shape as the SQL side's IN-batched
-bridges). ✅
-
-### Relation loading
-
-`.with('rel')` on a mongo-connected related model routes through
-`MongoAdapter.runIn` (hasMany/hasOne/belongsTo) or `runBelongsToMany`
-(m:m pivots). IN-batched hydration with `$in` filters — the same
-pattern the SQL side uses. Cross-connection eager loading (mongo
-model → SQL model or the reverse) works — the dispatch checks the
-RelatedModel's connection, not the parent's. ✅
+| `.toSQL()` / `.getQueryBuilder()` | SQL builder | `.getCollection()` + aggregation pipeline |
+| `.whereRaw()` / `.orWhereRaw()` | raw SQL fragment | `.getCollection().find(filter)` |
+| `.whereColumn()` | column-vs-column comparison | `.getCollection().aggregate([{$match: {$expr: {...}}}])` |
+| `.select([...])` projection | MikroORM mongo returns full docs | `.getCollection().find(match, {projection: ...})` |
+| `.distinct()` | SQL `DISTINCT` modifier | `.getCollection().distinct(col, match)` |
+| `.cursor()` (via `qb.stream()`) | SQL cursor | `.lazy()` (mongo-safe pagination cursor) |
+| `.cursorPaginate()` | keyset SQL cursor | roll your own with `_id` boundaries |
+| `.selectSum / selectAvg / …` | raw select fragment | `.getCollection().aggregate([{$group: ...}])` |
+| `.having()` | SQL grouped filter | aggregation pipeline `$match` after `$group` |
+| Date-bucketing wheres | SQL-only date functions | precompute + filter, or aggregation pipeline |
 
 ### `foobar db:sync`, `foobar db:make`, `foobar db:migrate`
 
@@ -179,7 +171,7 @@ level errors.
 
 ## Enabling MongoDB in your app
 
-**Whole-app** (limited today; use for models that don't need widgets):
+**Whole-app**:
 
 ```js
 // config/database.js
@@ -188,6 +180,7 @@ export default {
   database: 'foobar',
   host: process.env.MONGO_HOST || 'localhost',
   port: 27017,
+  // OR: url: 'mongodb://user:pass@host:27017'
 }
 ```
 
