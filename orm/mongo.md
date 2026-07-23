@@ -14,20 +14,35 @@ compatible with document databases — most notably by never emitting
 JOINs. Relationships load via IN-batched hydration, not JOINs; that
 one design decision is what makes MongoDB support tractable at all.
 
-As of **v0.5.1**, the framework's terminal query methods dispatch
-through a `MongoAdapter` on mongo-connected models. `Model.query()`,
-`.first()`, `.get()`, `.paginate()`, `.pluck()`, `.value()`,
-`.updateAll()`, `.deleteAll()`, `.with(...)`, `.withCount / withSum /
-withAvg / withMin / withMax / withExists` (including dotted-path
-through-aggregates), `.has() / doesntHave() / whereHas /
-whereDoesntHave`, and the widget aggregate primitives all work on
-mongo. `Db.boot()` bootstraps a mongo-driven connection end-to-end.
+As of **v0.5.2**, MongoDB dispatch covers the full query-builder
+surface. `Model.query()`, `.first()`, `.get()`, `.paginate()`,
+`.pluck()`, `.value()`, `.updateAll()`, `.deleteAll()`, `.with(...)`,
+`.withCount / withSum / withAvg / withMin / withMax / withExists`
+(including dotted-path through-aggregates), `.has() / doesntHave() /
+whereHas / whereDoesntHave`, and the widget aggregate primitives all
+work on mongo. `Db.boot()` bootstraps a mongo-driven connection end-
+to-end.
 
-A handful of SQL-only escape hatches (`.toSQL()`, `.getQueryBuilder()`,
-`.whereRaw()`, `.whereColumn()`, `.cursor()` via `qb.stream()`,
-`.cursorPaginate()`, `.select()` projections, `.distinct()`) still
-throw with a pointer to `.getCollection()` — see below for the mongo
-equivalents.
+### Newly wired in v0.5.2
+
+- **`.whereColumn(a, op, b)` / `.orWhereColumn(a, op, b)`** — translates
+  to `{$expr: {[op]: ['$a', '$b']}}`.
+- **`.select([cols])`** — projection pushed as MikroORM `fields`.
+- **`.distinct()`** — row-dedup post-fetch; `.distinct().pluck(col)`
+  routes through the native mongo `distinct(col, match)`.
+- **`.cursor()`** — streams via native `Collection.find(...)` cursor,
+  yielding hydrated models.
+- **`.cursorPaginate({perPage, cursor, column, direction})`** — keyset
+  pagination using `$gt` / `$lt` on the key column.
+- **`.having(col, op, val)` + `groupBy(col) + selectSum/Avg/Min/Max/Count`** —
+  a full `$match → $group → $match(having) → $sort → $limit` pipeline
+  supporting multiple named aggregates in one group.
+- **`.whereYear / whereMonth / whereDay / whereDate`** — translated via
+  `$expr` + `$year / $month / $dayOfMonth / $dateToString`.
+- **`.whereMongo(filter) / .orWhereMongo(filter)`** — NEW mongo-side
+  raw filter hatch, symmetric with `.whereRaw()`. Merges any native
+  MongoDB filter into the generated `$match`. Throws on SQL
+  connections with a pointer at `.whereRaw()`.
 
 ---
 
@@ -92,23 +107,21 @@ Verified by parity tests under `framework/test/orm/mongo/parity/`:
 - Admin dashboard — the dashboard's `Model.query().count()` sweep works
   on mongo-connected models.
 
-## What still throws (SQL-only escape hatches by design)
+## Genuinely SQL-only
 
-These are SQL-only escape hatches with no direct mongo equivalent.
-Each throws a helpful error pointing at `.getCollection()`.
+Two escape hatches have no mongo counterpart — they explicitly hand you
+a SQL construct. Each throws with a pointer at the mongo equivalent.
 
 | Method | Why | Mongo alternative |
 |---|---|---|
-| `.toSQL()` / `.getQueryBuilder()` | SQL builder | `.getCollection()` + aggregation pipeline |
-| `.whereRaw()` / `.orWhereRaw()` | raw SQL fragment | `.getCollection().find(filter)` |
-| `.whereColumn()` | column-vs-column comparison | `.getCollection().aggregate([{$match: {$expr: {...}}}])` |
-| `.select([...])` projection | MikroORM mongo returns full docs | `.getCollection().find(match, {projection: ...})` |
-| `.distinct()` | SQL `DISTINCT` modifier | `.getCollection().distinct(col, match)` |
-| `.cursor()` (via `qb.stream()`) | SQL cursor | `.lazy()` (mongo-safe pagination cursor) |
-| `.cursorPaginate()` | keyset SQL cursor | roll your own with `_id` boundaries |
-| `.selectSum / selectAvg / …` | raw select fragment | `.getCollection().aggregate([{$group: ...}])` |
-| `.having()` | SQL grouped filter | aggregation pipeline `$match` after `$group` |
-| Date-bucketing wheres | SQL-only date functions | precompute + filter, or aggregation pipeline |
+| `.toSQL()` / `.getQueryBuilder()` | returns MikroORM's SQL QueryBuilder | `.getCollection()` + aggregation pipeline |
+| `.whereRaw(sql, bindings)` / `.orWhereRaw()` | raw SQL fragment | `.whereMongo(filter)` or `.getCollection()` |
+
+Everything else on the query builder — filtering, ordering, projection,
+grouping, having, aggregates, cursor, keyset pagination, date-part
+wheres, column-vs-column comparisons, eager loads,
+through-aggregates — dispatches to the `MongoAdapter` on mongo-
+connected models.
 
 ### `foobar db:sync`, `foobar db:make`, `foobar db:migrate`
 
