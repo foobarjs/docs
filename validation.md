@@ -44,6 +44,28 @@ export default class User extends Model {
 
 Numeric type checks (`must be a number`) run automatically for `Field.number()` / `Field.float()` / `Field.decimal()`. Boolean type checks run for `Field.boolean()`.
 
+### Mongo object IDs
+
+On mongo-connected models, FK ids are ObjectId hex strings (24-char
+hex), not integers. `Field.number()` on an id-shaped rule will reject
+them with `must be a number`. Use `Field.string()` for FK id rules
+when the referenced model is mongo-backed:
+
+```js
+// FormRequest rule for a mongo-backed AuditLog
+rules() {
+  return {
+    userId: Field.string().required(),        // NOT Field.number()
+    action: Field.string().required(),
+  }
+}
+```
+
+Model-level FK columns (`Field.belongsTo(() => X)`) already handle the
+type-agnostic id under the hood — this note is specifically about
+`FormRequest` rules and manual `Validator` schemas where you spell out
+the FK column yourself.
+
 ## Auto-Validation on Save
 
 When `instance.save()` is called, the model auto-validates all fields:

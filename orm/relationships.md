@@ -4,6 +4,26 @@
 
 Foobar ORM supports four relationship types: BelongsTo, HasMany, HasOne, and BelongsToMany.
 
+## No JOINs, ever
+
+The ORM never emits SQL `JOIN`s. Every relation loads with a separate
+`WHERE fk IN (?, ?, ...)` per hop — the same IN-batched pattern used
+by [database/workflow.md](../database/workflow.md). Nested eager loads
+collect all child instances across all parents into one array and
+re-run a single fetch per depth level, so
+`Product.with({ category: ['products'] })` executes at most 3 queries
+regardless of dataset size.
+
+Two consequences follow from that one design decision:
+
+- **Cross-connection relations work** — each hop routes to its own
+  connection's driver, since no single statement crosses engines.
+- **MongoDB is a first-class target** — mongo's `$in` operator maps 1:1
+  onto the IN-batched pattern. `belongsTo` / `hasMany` / `hasOne` /
+  `belongsToMany` all dispatch through the `MongoAdapter` on
+  mongo-connected models; the query surface is identical. See
+  [MongoDB support](./mongo.md).
+
 ## BelongsTo
 
 A child model that belongs to a parent. The foreign key is stored on the child's table.

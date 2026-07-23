@@ -74,6 +74,14 @@ class Attendee extends Model {
 }
 ```
 
+> **On mongo:** models still expose an integer-shaped `.id` in userland;
+> internally the framework maps it to mongo's `_id` (ObjectId). You never
+> touch `_id` directly — `Model.find(id)`, FK columns, and URL
+> interpolation all take the same opaque `.id`. Note that **FK id
+> validation rules should use `Field.string()` on mongo** (see
+> [Validation](../validation.md#mongo-object-ids)), because
+> `Field.number()` rejects ObjectId hex strings.
+
 ### Field Constraints
 
 ```js
@@ -200,7 +208,7 @@ static uniques = [
 ]
 ```
 
-For CHECK constraints (Postgres, MySQL 8.0.16+, SQLite):
+For CHECK constraints (Postgres, MySQL 8.0.16+, SQLite — mongo is schemaless and has no equivalent):
 
 ```js
 static checks = [
@@ -354,6 +362,12 @@ Once your models are set up, get their tables into the database:
 The framework never auto-syncs your schema at server boot when migration
 files exist.
 
+> **On mongo:** `db:make` / `db:migrate` / `db:sync` are SQL-shaped and
+> don't apply. Mongo is schemaless — collections are auto-created on
+> first write. For indexes on mongo-connected models, call
+> `Model.query().getCollection().createIndex(...)` in a boot script or
+> seeder.
+
 **Auto-sync never drops tables.** When `Db.boot()` runs its auto-sync (used by
 tests and by boot when no `database/migrations/` files exist), it calls
 `schema.update({ dropTables: false })`. Tables that aren't in the registered
@@ -393,6 +407,11 @@ export default {
 }
 ```
 
+The `driver` can also be `'mongodb'` — set it on the default connection
+for a whole-app mongo setup, or on a named connection to route specific
+models to mongo while the rest stay on SQL. See
+[MongoDB support](./mongo.md) for setup details.
+
 Point a model at a named connection with `static connection`:
 
 ```js
@@ -419,7 +438,7 @@ Framework-owned tables (admin_exports, queue_jobs, failed_jobs, etc.) always liv
 
 ### Cross-connection relationships
 
-Relations between models on different connections work for `belongsTo`, `hasMany`, and `hasOne`. The framework loads relations via separate queries (never JOINs), so each model's query routes to its own connection independently.
+Relations between models on different connections work for `belongsTo`, `hasMany`, and `hasOne`. The framework loads relations via separate queries (never JOINs), so each model's query routes to its own connection independently. This is also why mongo-backed and SQL-backed models can eager-load each other — the `WHERE fk IN (…)` pattern maps to mongo's `$in` operator, and each hop uses its own adapter.
 
 ```js
 // Product on SQLite (default), Category on Postgres (legacy)
@@ -534,6 +553,9 @@ const product = await Product.find(1)
 
 // Find or fail (throws 404)
 const product = await Product.findOrFail(1)
+
+// On mongo, ObjectId hex strings are accepted transparently:
+// await Product.find('507f1f77bcf86cd799439011')
 
 // All records
 const products = await Product.all()
@@ -775,6 +797,12 @@ try {
 }
 ```
 
+> **On mongo:** true transactions require a replica set (or mongos).
+> Against a standalone `mongod` the framework detects the missing
+> session support and transparently re-runs the callback without one —
+> writes execute sequentially but there's no atomicity. Run a replica
+> set (`run-rs`, Atlas, etc.) to get real transactional semantics.
+
 ## Validation
 
 Validation runs automatically on every `save()`. On failure, a `ValidationError` is thrown:
@@ -1010,7 +1038,21 @@ await Product.where('featured', true).exists()
 await Product.query().distinct().count('category')
 ```
 
+> **On mongo:** the field-list form `.distinct(col).pluck(col)` routes
+> through mongo's native `Collection.distinct(col, match)` and matches
+> SQL semantics exactly. The bare `.distinct()` (no argument) form
+> dedups fetched models JS-side via `JSON.stringify(model)`, which is
+> best-effort — models with non-serializable state can dedup
+> incorrectly. Prefer the field-list form when you can.
+
 `sum`/`avg`/`min`/`max` return a `Number` (or `null` if there are no rows). `count` always returns a `Number`.
+
+> **On mongo:** every aggregate routes through the `MongoAdapter`
+> primitives — `count` uses `countDocuments`, and `sum`/`avg`/`min`/`max`
+> compile to `$match → $group` pipelines. Widget aggregates
+> (`Widget.count / sum / avg / min / max / exists / trend / chart`)
+> dispatch through the same primitives, so the admin dashboard works
+> unchanged on mongo-connected models.
 
 ## Filter primitives
 
@@ -1037,6 +1079,15 @@ Product.query().whereColumn('price', '=', 'stock')
 Product.query().whereRaw('price > ? OR stock < ?', [50, 5])
 Product.query().orWhereRaw('name LIKE ?', ['%sale%'])
 ```
+
+> **On mongo:** `.whereRaw()` / `.orWhereRaw()` throw with a pointer at
+> the mongo-side equivalent, `.whereMongo(filter)` / `.orWhereMongo(filter)`,
+> which merge a native MongoDB filter into the generated `$match`. The
+> `whereColumn` / `orWhereColumn` pair translates to `{$expr: {[op]:
+> ['$a', '$b']}}` on mongo. Everything else in this section
+> (`whereIn`, `whereNotIn`, `whereNull`, `whereBetween`, the date
+> helpers, closure-scoped nested WHERE) dispatches through the
+> `MongoAdapter` unchanged.
 
 #### Or-variants
 
@@ -1224,6 +1275,12 @@ per-event averages.
 > different database connections. Bind lists are auto-chunked at driver
 > limits (SQLite 900, MSSQL 2000, Postgres 30k, MySQL 50k), so a parent
 > list of 100k ids does not blow past `SQLITE_MAX_VARIABLE_NUMBER`.
+>
+> **On mongo:** each hop dispatches through the adapter of that hop's
+> model. A cross-engine dotted path (mongo parent → SQL leaf, or vice
+> versa) runs each hop through its own connection's adapter — no single
+> pipeline crosses engines. For typical cardinalities this is fine; for
+> wide fan-out at each hop consider denormalizing.
 
 ### whereHas / has / doesntHave
 
@@ -1294,6 +1351,11 @@ const page2 = await Product.query()
 
 Options: `perPage`, `cursor`, `column` (default `id`), `direction` (`asc`|`desc`).
 
+> **On mongo:** `.paginate()` works unchanged. `.cursorPaginate()` uses
+> `$gt` / `$lt` on the key column — including `_id` boundaries when you
+> keyset on the primary key. `.cursor()` streams via mongo's native
+> `Collection.find(...)` cursor, yielding hydrated models.
+
 ## Debug helpers
 
 ```js
@@ -1315,6 +1377,13 @@ const rows = await qb.select(['id', 'name']).execute('all')
 ```
 
 CTEs, joins, sub-queries, `INSERT INTO ... SELECT`, `FOR UPDATE` locks — all available on the returned builder.
+
+> **On mongo:** `.getQueryBuilder()` and `.toSQL()` throw with a pointer
+> at the mongo mirror, `.getCollection()`, which returns MikroORM's
+> underlying MongoDB `Collection`. From there the full driver-level API
+> is available (`aggregate`, `distinct`, `createIndex`, `bulkWrite`,
+> `findOneAndUpdate`, etc.). See
+> [MongoDB support — escape hatches](./mongo.md#escape-hatches).
 
 ## CustomModel
 
