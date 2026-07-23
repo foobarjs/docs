@@ -88,11 +88,8 @@ something surprises you or when you want a mental model before diving in.
 
 - [Lifecycle](./lifecycle.md) — how a request flows from boot to response
 - [AGENTS.md](./AGENTS.md) — architecture notes for contributors and agents
-- [Database workflow](./database/workflow.md) — the two schema-sync modes, safety guarantees, multi-team story, PR review checklist
-- **Design decisions** (worth writing up soon; live in CHANGELOG for now):
-  - *Why explicit routes suppress convention* — see `routing.md` "Explicit routes override conventions"
-  - *Resource declaration IS the authorization* — see `admin-panel.md`
-  - *Auto-coercion + transforms in FormRequest* — see `validation.md`
+- [Auth model](./explanations/auth-model.md) — two concepts, one vocabulary
+- [Database workflow](./database/workflow.md) — the two schema-sync modes, safety guarantees, multi-team story
 
 ---
 

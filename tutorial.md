@@ -28,7 +28,7 @@ Reading time: ~30 minutes.
 Run:
 
 ```bash
-npm install -g git+https://github.com/foobarjs/foobarjs.git#v0.3.2
+npm install -g git+https://github.com/foobarjs/foobarjs.git#v0.4.0
 foobar new links-app
 ```
 
@@ -45,14 +45,21 @@ cd links-app
 foobar serve --dev
 ```
 
-You should see:
+You should see a boot line and — because the API layer is auth-required
+by default in v0.4.0 — a **surface report** listing every mounted API
+route with its middleware chain:
 
 ```
-foobarjs vX.Y.Z — serving on http://localhost:3000
-  watch:  on
-  admin:  /admin
-  api:    /api
+foobarjs dev mode (watch + live-reload) — http://localhost:3000
+
+[foobar] API surface (auth default: 'auth'):
+  GET     /api/users              api.users.index    [auth]
+  ...
 ```
+
+`PUBLIC` (bold red on a TTY) marks any route without auth. Right now
+your fresh scaffold has no public API routes — everything requires an
+authenticated user. Section 8 shows how to opt a resource out.
 
 Open <http://localhost:3000>. The default home page renders. Open
 <http://localhost:3000/admin> and log in with the admin credentials you
@@ -168,8 +175,9 @@ Confirm it:
 foobar routes
 ```
 
-`static auth = false` opts this controller out of the global auth guard so
-anonymous visitors can browse.
+`static withoutMiddleware = ['auth']` opts this controller out of the
+global auth requirement so anonymous visitors can browse. The equivalent
+per-route form is `router.get('/links', ...).public()`.
 
 ## 6. Write the views
 
@@ -359,15 +367,15 @@ after a validation failure.
 > `routes/web.js` / auto-mounted from the controller), so CSRF's
 > Origin/Referer check applies. To POST to a web route from curl, include
 > `-H "Origin: http://localhost:3000"`. API routes (`routes/api.js`,
-> `/api/*`) have CSRF **off** by default in v0.3.2, so `curl -X POST
+> `/api/*`) have CSRF **off** by default (since v0.3.2), so `curl -X POST
 > http://localhost:3000/api/links -d '{...}'` just works without any
 > Origin header.
 
 ## 8. Use the API
 
 You already have one. Because `foobarjs/api` is registered in
-`config/app.js` and `Link` is a discovered model, five REST endpoints are
-already live:
+`config/app.js` and `Link` is a discovered model, five REST endpoints
+were auto-mounted at boot — you saw them in the API surface report in §2.
 
 | Method | Path |
 |--------|------|
@@ -377,7 +385,27 @@ already live:
 | PUT | `/api/links/:id` |
 | DELETE | `/api/links/:id` |
 
-Run:
+**They all require authentication by default** in v0.4.0. A bare curl
+gets 401:
+
+```bash
+curl -s http://localhost:3000/api/links
+# → {"error":"Unauthenticated","status":401,"requestId":"..."}
+```
+
+For a public browse-anyone-can API, mark the resource `.public()`.
+Create one file:
+
+<!-- app/api/link.api.js -->
+```js
+import { Api } from 'foobarjs/api'
+import Link from '../models/link.model.js'
+
+export default Api.resource(Link).public()
+```
+
+Save. Watch reloads. The API surface report reprints — now `PUBLIC`
+next to every `api.links.*` route. Try again:
 
 ```bash
 curl -s http://localhost:3000/api/links | jq
@@ -395,16 +423,19 @@ Output:
 }
 ```
 
-Create one from the CLI:
+For per-verb control — e.g. reads public, writes still auth-required:
 
-```bash
-curl -s -X POST http://localhost:3000/api/links \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Anthropic","url":"https://anthropic.com"}'
+```js
+export default Api.resource(Link).public('index', 'show')
+// GET /api/links + GET /api/links/:id are public
+// POST/PUT/DELETE stay auth-required
 ```
 
-The API is public by default. To require auth (per-model or globally),
-drop a `config/api.js` — see [api.md](./api.md#access-rules).
+To flip the *global* default so every model auto-mounts public (v0.3.x
+behavior), set `auth.default: 'public'` in `config/auth.js`. Do this
+only if you know none of your models expose sensitive data — the point
+of the v0.4.0 default is that a stray `PasswordReset` model doesn't
+silently become a public JSON dump.
 
 Interactive docs are mounted at <http://localhost:3000/api/docs>.
 
