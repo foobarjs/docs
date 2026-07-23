@@ -87,12 +87,12 @@ SQL query builder that doesn't exist on MikroORM's mongo driver.
 | Widget | Status | Why |
 |---|---|---|
 | `Widget.value(name, resolver)` | ✅ works | Arbitrary user code; whatever the resolver does |
-| `Widget.count(name, Model)` | ❌ throws | Uses `_runAggregate` → SQL query builder |
-| `Widget.sum/avg/min/max` | ❌ throws | Same code path |
-| `Widget.exists` | ❌ throws | Uses `mikroRaw('1 as ex')` |
-| `Widget.trend(...)` (bucketed) | ❌ throws | Explicit throw in `_dateExpr` |
-| `Widget.chart({bucket})` | ❌ throws | Same bucketing code path |
-| `Widget.chart({groupBy})` (no bucket) | ❌ throws | Uses `selectAggregate` with `mikroRaw` SQL fragments |
+| `Widget.count(name, Model)` | ✅ works | Routes through `MongoAdapter.runAggregate` → `countDocuments` |
+| `Widget.sum/avg/min/max` | ✅ works | Routes through `MongoAdapter.runAggregate` → `em.aggregate` |
+| `Widget.exists` | ✅ works | Routes through `MongoAdapter.runExists` → `countDocuments(..., {limit:1})` |
+| `Widget.trend(...)` (bucketed) | ✅ works | Routes through `MongoAdapter.runDateBucketAggregate` |
+| `Widget.chart({bucket})` | ✅ works | Same bucketing code path |
+| `Widget.chart({groupBy})` (no bucket) | ✅ works | Routes through `MongoAdapter.runGroupedAggregate` |
 
 The framework's own dashboard rendering at `AdminController.js:103`
 runs `Model.query().count()` for every model with `adminConfig.dashboard =
