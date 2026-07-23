@@ -883,7 +883,7 @@ Product.applyScope('published', queryBuilder)
 
 ## Appends
 
-Include virtual/computed attributes in JSON output by defining `static appends`:
+A getter on a model class is already accessible as `product.discountedPrice` — that's just JavaScript. `static appends` is about **JSON output** specifically: `JSON.stringify()` (and everything downstream — API responses, view props, `res.json()`) only serializes own enumerable properties by default, so prototype getters silently drop out of serialized payloads. Listing a getter in `appends` tells the serializer to include it.
 
 ```js
 class Product extends Model {
@@ -895,11 +895,16 @@ class Product extends Model {
 }
 
 const product = await Product.find(1)
+
+// Direct access — works with or without `appends`, it's a normal JS getter:
+product.discountedPrice  // → "89.99"
+
+// JSON output — only includes `discountedPrice` because it's in `appends`:
 JSON.stringify(product)
-// → { "id": 1, "name": "...", "discountedPrice": "..." }
+// → { "id": 1, "name": "...", "discountedPrice": "89.99" }
 ```
 
-Appended values are computed at serialization time via the class getter. The getter can access any model value through `this.$attributes[fieldName]` or via the property shorthand (`this.price`).
+Skip `appends` if the getter is only for internal use. Add it when you want the value to appear in API responses or serialized output.
 
 ## Accessors & Mutators
 
