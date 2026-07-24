@@ -1220,6 +1220,41 @@ await Category.query().withExists('products').get()
 
 All `withCount`/`withSum`/... use a single `GROUP BY` query per relation, so a list of 500 categories with a `withSum('products', 'price')` is 2 queries total: 1 for the categories, 1 for the sums.
 
+### Result name aliasing
+
+Every aggregate builder accepts an optional `{ as: 'someName' }` argument
+to override the auto-derived property name. This is especially useful for
+dotted-path through aggregates where the default name can be hard to read.
+
+```js
+// Without alias — auto-derived
+await Category.query().withSum('products', 'price').get()
+// → category.productsSumPrice
+
+// With alias — explicit
+await Category.query().withSum('products', 'price', null, { as: 'totalPrice' }).get()
+// → category.totalPrice
+
+// withCount takes { as } via the second argument (or third when a constraint is used)
+await Category.query().withCount('products', { as: 'productCount' }).get()
+// → category.productCount
+
+await Category.query().withCount('products', q => q.where('stock', '>', 0), { as: 'inStock' }).get()
+// → category.inStock
+
+// Also: withAvg, withMin, withMax, withExists
+await Category.query()
+  .withAvg('products', 'price', null, { as: 'avgPrice' })
+  .withMin('products', 'price', null, { as: 'cheapest' })
+  .withMax('products', 'price', null, { as: 'mostExpensive' })
+  .withExists([{ relation: 'products', as: 'hasProducts' }])
+  .get()
+```
+
+When `{ as }` is provided the auto-derived name is not set — only the
+aliased name appears on the model. When `{ as }` is omitted the existing
+auto-derived behaviour is preserved (no breaking change).
+
 ### Constraint callbacks
 
 Every relation-aggregate accepts an optional callback that narrows which
@@ -1248,16 +1283,23 @@ await Event.query()
 
 Aggregates can walk multiple hasMany/hasOne hops using dotted notation.
 Aliases are derived by concatenating the capitalized path segments with
-the aggregate + column suffix.
+the aggregate + column suffix, or you can provide an explicit `{ as }`.
 
 ```js
 // Sum every user's orders across all their events
 await User.query().withSum('events.orders', 'total').get()
 // → user.eventsOrdersSumTotal
 
+// Same, but with an explicit alias for readability
+await User.query().withSum('events.orders', 'total', null, { as: 'totalRevenue' }).get()
+// → user.totalRevenue
+
 // Count attendees three hops deep
 await User.query().withCount('events.orders.attendees').get()
 // → user.eventsOrdersAttendeesCount
+
+await User.query().withCount('events.orders.attendees', { as: 'totalAttendees' }).get()
+// → user.totalAttendees
 
 // Does the user have any orders anywhere?
 await User.query().withExists('events.orders').get()
@@ -1265,7 +1307,7 @@ await User.query().withExists('events.orders').get()
 
 // Leaf constraints still apply on the deepest hop
 await User.query()
-  .withSum('events.orders', 'total', q => q.where('status', 'confirmed'))
+  .withSum('events.orders', 'total', q => q.where('status', 'confirmed'), { as: 'confirmedRevenue' })
   .get()
 ```
 

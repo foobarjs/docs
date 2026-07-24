@@ -145,6 +145,69 @@ Pivot tables include:
 - `post_id` — Foreign key to posts
 - `tag_id` — Foreign key to tags
 
+## Which aggregate form to use
+
+The framework provides two syntaxes for loading relation aggregates,
+each serving a different purpose.
+
+### Dotted path — rollup to root
+
+`withSum('events.orders', 'total')` walks the relation chain and rolls
+the aggregate up to the query root — one scalar per aggregate on the
+root model. Use this when you want a single KPI.
+
+```js
+// Total confirmed revenue across all of a user's events
+await User.query()
+  .withSum('events.orders', 'total', q => q.where('status', 'confirmed'), { as: 'totalRevenue' })
+  .get()
+// → user.totalRevenue — one number for the whole user
+```
+
+Prefer with `{ as: 'someName' }` (see [Result name aliasing](./getting-started.md#result-name-aliasing))
+for readability, especially when the dotted path produces a long
+auto-derived name.
+
+### Nested closure — per-item aggregate
+
+`with('events', q => q.withSum('orders', 'total'))` places the aggregate
+on each loaded `Event` item. Use this when the aggregate belongs to each
+item in the list individually.
+
+```js
+// Sum of orders per event
+const user = await User.query()
+  .with('events', q => q
+    .orderBy('startsAt', 'desc')
+    .withSum('orders', 'total')
+  )
+  .first()
+// → each event in user.events has event.ordersSumTotal
+```
+
+Inside a `.with()` closure the auto-derived name (`ordersSumTotal`) is
+already clear from scope, so `{ as }` is rarely needed there.
+
+### Both — when you need both scopes
+
+You can use both forms in the same query — they run independently with
+their own filter and pagination scopes. Different numbers are correct
+(one is per-root, the other is per-item).
+
+```js
+const user = await User.query()
+  .withSum('events.orders', 'total', q => q.where('status', 'confirmed'), { as: 'totalRevenue' })
+  .with('events', q => q
+    .withSum('orders', 'total', q => q.where('status', 'confirmed'))
+    .whereHas('orders', q => q.where('status', 'confirmed'))
+  )
+  .first()
+
+// user.totalRevenue                       → root-level scalar
+// user.events[0].ordersSumTotal           → per-event scalar
+// user.events.length                      → only events with confirmed orders
+```
+
 ## Relationship Reference
 
 | Type | Foreign Key Location | Example Column |
